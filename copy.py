@@ -73,6 +73,7 @@
 #     elif callback.data == "edit":
 #         pennij_bot.edit_message_text('Сообщение изменено', callback.message.chat.id, callback.message.message_id)
 #     elif callback.data == "Пиво":
+#         pass
 #
 #
 # @pennij_bot.message_handler(commands=["info"])
