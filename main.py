@@ -3,8 +3,10 @@ import telebot
 import webbrowser
 import random
 from config import BOT_TOKEN
+from assortiment import beer
 
 """
+🧺🛒📲
 Команды для бота:
 start - Вернуться к началу
 help - Увидеть все команды
@@ -16,8 +18,6 @@ URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
 
 answers = ['Я не понял, что ты хочешь сказать😲', 'Извини, я тебя не понимаю😅', 'Я не знаю такой команды🤔',
            'Я не понимаю о чем ты🙃']
-
-final_order = []
 
 announcment = False
 
@@ -56,6 +56,41 @@ def get_help(message):
                             "\n<b>По вопросам неисправностей или сотрудничества:</b> <u>@repredess</u>",
                             parse_mode='html')
 
+
+@pennij_bot.message_handler(func=lambda message: message.text in beer)
+def beer_add(message):
+    item = message.text
+    markup_inline = telebot.types.InlineKeyboardMarkup()
+    add_liter = telebot.types.InlineKeyboardButton('+1', callback_data=f'+')
+    add_poltora = telebot.types.InlineKeyboardButton('+1.5', callback_data=f'+')
+    remove_liter = telebot.types.InlineKeyboardButton('-1', callback_data=f'-')
+    remove_poltora = telebot.types.InlineKeyboardButton('-1.5', callback_data=f'-')
+    cart = telebot.types.InlineKeyboardButton('🛒 Корзина', callback_data=f'shoppingCart')
+    markup_inline.add(remove_liter, add_liter)
+    markup_inline.add(remove_poltora, add_poltora)
+    if beer[item]["Подробнее"]:
+        adress = telebot.types.InlineKeyboardButton('Подробнее...', url=beer[item]["Подробнее"])
+        markup_inline.add(adress, cart)
+    else:
+        markup_inline.add(cart)
+    try:
+        pic = open(f"goods/pivo/{item}.jpg", 'rb')
+        pennij_bot.send_photo(message.chat.id, pic, f'<i><b>{item}</b> | {beer[item]["Фильтрация"]}</i>'
+                                                    f'\n{beer[item]["Описание"]}'
+                                                    f'\n'
+                                                    f'\nЦена: {beer[item]["Цена"]}р/литр',
+                              reply_markup=markup_inline,
+                              parse_mode='html')
+    except:
+        pic = open(f'goods/pivo/Пиво.jpg', 'rb')
+        pennij_bot.send_photo(message.chat.id, pic, f'<i><b>{item}</b> | {beer[item]["Фильтрация"]}</i>'
+                                                    f'\n{beer[item]["Описание"]}'
+                                                    f'\n'
+                                                    f'\nЦена: {beer[item]["Цена"]}р/литр',
+                              reply_markup=markup_inline,
+                              parse_mode='html')
+
+
 @pennij_bot.message_handler()
 def user_messages(message):
     # Кнопки главного меню
@@ -74,79 +109,78 @@ def user_messages(message):
     # Кнопка "ПИВО"
     elif message.text == 'Пиво':
         chooseBeer(message)
-    elif message.text == 'Вайсберг':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        markup_inline = telebot.types.InlineKeyboardMarkup()
-        btn1 = types.KeyboardButton('🛒 Добавить "Вайсберг"')
-        btn2 = types.KeyboardButton('↩️ Назад к пиву')
-        markup.row(btn1, btn2)
-        pic = open("goods/pivo/Вайсберг.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Нежное пиво с сливочным послевкусием. Алкоголь 4.7.',
-                              reply_markup=markup)
-    elif message.text == 'Янтарное':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Янтарное"')
-        btn2 = types.KeyboardButton('↩️ Назад к пиву')
-        markup.row(btn1, btn2)
-        pic = open("goods/pivo/Вайсберг.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Янтарное',
-                              reply_markup=markup)
-    elif message.text == 'Штормовое':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Штормовое"')
-        btn2 = types.KeyboardButton('↩️ Назад к пиву')
-        markup.row(btn1, btn2)
-        pic = open("goods/pivo/Вайсберг.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Штормовое',
-                              reply_markup=markup)
-    elif message.text == 'Стаут':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Стаут"')
-        btn2 = types.KeyboardButton('↩️ Назад к пиву')
-        markup.row(btn1, btn2)
-        pic = open("goods/pivo/Вайсберг.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Стаут',
-                              reply_markup=markup)
-    elif message.text == 'Домашнее':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Домашнее"')
-        btn2 = types.KeyboardButton('↩️ Назад к пиву')
-        markup.row(btn1, btn2)
-        pic = open("goods/pivo/Вайсберг.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Домашнее',
-                              reply_markup=markup)
-    elif message.text == 'Регион 82':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Регион 82"')
-        btn2 = types.KeyboardButton('↩️ Назад к пиву')
-        markup.row(btn1, btn2)
-        pic = open("goods/pivo/Вайсберг.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Регион 82',
-                              reply_markup=markup)
-    elif message.text == 'Чешское Элитное':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Чешское Элитное"')
-        btn2 = types.KeyboardButton('↩️ Назад к пиву')
-        markup.row(btn1, btn2)
-        pic = open("goods/pivo/Вайсберг.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Чешское Элитное',
-                              reply_markup=markup)
-    elif message.text == 'Чешское Нефильтр':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Чешское Нефильтр"')
-        btn2 = types.KeyboardButton('↩️ Назад к пиву')
-        markup.row(btn1, btn2)
-        pic = open("goods/pivo/Вайсберг.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Чешское Нефильтр',
-                              reply_markup=markup)
-    elif message.text == 'Хорватское':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Хорватское"')
-        btn2 = types.KeyboardButton('↩️ Назад к пиву')
-        markup.row(btn1, btn2)
-        pic = open("goods/pivo/Вайсберг.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Хорватское',
-                              reply_markup=markup)
+    # elif message.text == 'Вайсберг':
+    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    #     btn1 = types.KeyboardButton('🛒 Добавить "Вайсберг"')
+    #     btn2 = types.KeyboardButton('↩️ Назад к пиву')
+    #     markup.row(btn1, btn2)
+    #     pic = open("goods/pivo/Вайсберг.jpg", 'rb')
+    #     pennij_bot.send_photo(message.chat.id, pic, 'Нежное пиво с сливочным послевкусием. Алкоголь 4.7.',
+    #                           reply_markup=markup)
+    # elif message.text == 'Янтарное':
+    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    #     btn1 = types.KeyboardButton('🛒 Добавить "Янтарное"')
+    #     btn2 = types.KeyboardButton('↩️ Назад к пиву')
+    #     markup.row(btn1, btn2)
+    #     pic = open("goods/pivo/Вайсберг.jpg", 'rb')
+    #     pennij_bot.send_photo(message.chat.id, pic, 'Янтарное',
+    #                           reply_markup=markup)
+    # elif message.text == 'Штормовое':
+    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    #     btn1 = types.KeyboardButton('🛒 Добавить "Штормовое"')
+    #     btn2 = types.KeyboardButton('↩️ Назад к пиву')
+    #     markup.row(btn1, btn2)
+    #     pic = open("goods/pivo/Вайсберг.jpg", 'rb')
+    #     pennij_bot.send_photo(message.chat.id, pic, 'Штормовое',
+    #                           reply_markup=markup)
+    # elif message.text == 'Стаут':
+    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    #     btn1 = types.KeyboardButton('🛒 Добавить "Стаут"')
+    #     btn2 = types.KeyboardButton('↩️ Назад к пиву')
+    #     markup.row(btn1, btn2)
+    #     pic = open("goods/pivo/Вайсберг.jpg", 'rb')
+    #     pennij_bot.send_photo(message.chat.id, pic, 'Стаут',
+    #                           reply_markup=markup)
+    # elif message.text == 'Домашнее':
+    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    #     btn1 = types.KeyboardButton('🛒 Добавить "Домашнее"')
+    #     btn2 = types.KeyboardButton('↩️ Назад к пиву')
+    #     markup.row(btn1, btn2)
+    #     pic = open("goods/pivo/Вайсберг.jpg", 'rb')
+    #     pennij_bot.send_photo(message.chat.id, pic, 'Домашнее',
+    #                           reply_markup=markup)
+    # elif message.text == 'Регион 82':
+    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    #     btn1 = types.KeyboardButton('🛒 Добавить "Регион 82"')
+    #     btn2 = types.KeyboardButton('↩️ Назад к пиву')
+    #     markup.row(btn1, btn2)
+    #     pic = open("goods/pivo/Вайсберг.jpg", 'rb')
+    #     pennij_bot.send_photo(message.chat.id, pic, 'Регион 82',
+    #                           reply_markup=markup)
+    # elif message.text == 'Чешское Элитное':
+    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    #     btn1 = types.KeyboardButton('🛒 Добавить "Чешское Элитное"')
+    #     btn2 = types.KeyboardButton('↩️ Назад к пиву')
+    #     markup.row(btn1, btn2)
+    #     pic = open("goods/pivo/Вайсберг.jpg", 'rb')
+    #     pennij_bot.send_photo(message.chat.id, pic, 'Чешское Элитное',
+    #                           reply_markup=markup)
+    # elif message.text == 'Чешское Нефильтр':
+    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    #     btn1 = types.KeyboardButton('🛒 Добавить "Чешское Нефильтр"')
+    #     btn2 = types.KeyboardButton('↩️ Назад к пиву')
+    #     markup.row(btn1, btn2)
+    #     pic = open("goods/pivo/Вайсберг.jpg", 'rb')
+    #     pennij_bot.send_photo(message.chat.id, pic, 'Чешское Нефильтр',
+    #                           reply_markup=markup)
+    # elif message.text == 'Хорватское':
+    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    #     btn1 = types.KeyboardButton('🛒 Добавить "Хорватское"')
+    #     btn2 = types.KeyboardButton('↩️ Назад к пиву')
+    #     markup.row(btn1, btn2)
+    #     pic = open("goods/pivo/Вайсберг.jpg", 'rb')
+    #     pennij_bot.send_photo(message.chat.id, pic, 'Хорватское',
+    #                           reply_markup=markup)
 
     # Кнопка "СИДРЫ"
     elif message.text == 'Сидры':
@@ -450,8 +484,9 @@ def goodsChapter(message):
     btn4 = types.KeyboardButton("Рыбка")
     btn5 = types.KeyboardButton("Снеки")
     btn6 = types.KeyboardButton("↩️ Назад в меню")
+    btn7 = types.KeyboardButton("🛒 Корзина")
     markup.row(btn1, btn2)
-    markup.row(btn3)
+    markup.row(btn3, btn7)
     markup.row(btn5, btn4, btn6)
 
     if announcment:
@@ -495,5 +530,6 @@ def smartBottles(liters, price):
     # Если литров 0
     else:
         return 'Литров не может быть 0'
+
 
 pennij_bot.polling(none_stop=True)
