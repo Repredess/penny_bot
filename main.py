@@ -1,16 +1,17 @@
 from telebot import types
 import telebot
 import webbrowser
-import sqlite3
 import random
+from config import BOT_TOKEN
 
 """
 Команды для бота:
 start - Вернуться к началу
 help - Увидеть все команды
+site - Перейти на сайт
 """
 
-pennij_bot = telebot.TeleBot('6860875409:AAE6Rtbw1xdbw-Uubnk_x1ZXP1q78Bj-CIM')
+pennij_bot = telebot.TeleBot(BOT_TOKEN)
 URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
 
 answers = ['Я не понял, что ты хочешь сказать😲', 'Извини, я тебя не понимаю😅', 'Я не знаю такой команды🤔',
@@ -19,8 +20,9 @@ answers = ['Я не понял, что ты хочешь сказать😲', '�
 final_order = []
 
 announcment = False
-# announcment = "Советуем пропробовать наше новое пиво 'Новое пиво'"
 
+
+# announcment = "Советуем пропробовать наше новое пиво 'Новое пиво'"
 
 
 @pennij_bot.message_handler(commands=["start"])
@@ -54,7 +56,6 @@ def get_help(message):
                             "\n<b>По вопросам неисправностей или сотрудничества:</b> <u>@repredess</u>",
                             parse_mode='html')
 
-
 @pennij_bot.message_handler()
 def user_messages(message):
     # Кнопки главного меню
@@ -75,10 +76,11 @@ def user_messages(message):
         chooseBeer(message)
     elif message.text == 'Вайсберг':
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        markup_inline = telebot.types.InlineKeyboardMarkup()
         btn1 = types.KeyboardButton('🛒 Добавить "Вайсберг"')
         btn2 = types.KeyboardButton('↩️ Назад к пиву')
         markup.row(btn1, btn2)
-        pic = open("goods/pivo/weisberg.jpg", 'rb')
+        pic = open("goods/pivo/Вайсберг.jpg", 'rb')
         pennij_bot.send_photo(message.chat.id, pic, 'Нежное пиво с сливочным послевкусием. Алкоголь 4.7.',
                               reply_markup=markup)
     elif message.text == 'Янтарное':
@@ -86,7 +88,7 @@ def user_messages(message):
         btn1 = types.KeyboardButton('🛒 Добавить "Янтарное"')
         btn2 = types.KeyboardButton('↩️ Назад к пиву')
         markup.row(btn1, btn2)
-        pic = open("goods/pivo/weisberg.jpg", 'rb')
+        pic = open("goods/pivo/Вайсберг.jpg", 'rb')
         pennij_bot.send_photo(message.chat.id, pic, 'Янтарное',
                               reply_markup=markup)
     elif message.text == 'Штормовое':
@@ -94,7 +96,7 @@ def user_messages(message):
         btn1 = types.KeyboardButton('🛒 Добавить "Штормовое"')
         btn2 = types.KeyboardButton('↩️ Назад к пиву')
         markup.row(btn1, btn2)
-        pic = open("goods/pivo/weisberg.jpg", 'rb')
+        pic = open("goods/pivo/Вайсберг.jpg", 'rb')
         pennij_bot.send_photo(message.chat.id, pic, 'Штормовое',
                               reply_markup=markup)
     elif message.text == 'Стаут':
@@ -102,7 +104,7 @@ def user_messages(message):
         btn1 = types.KeyboardButton('🛒 Добавить "Стаут"')
         btn2 = types.KeyboardButton('↩️ Назад к пиву')
         markup.row(btn1, btn2)
-        pic = open("goods/pivo/weisberg.jpg", 'rb')
+        pic = open("goods/pivo/Вайсберг.jpg", 'rb')
         pennij_bot.send_photo(message.chat.id, pic, 'Стаут',
                               reply_markup=markup)
     elif message.text == 'Домашнее':
@@ -110,7 +112,7 @@ def user_messages(message):
         btn1 = types.KeyboardButton('🛒 Добавить "Домашнее"')
         btn2 = types.KeyboardButton('↩️ Назад к пиву')
         markup.row(btn1, btn2)
-        pic = open("goods/pivo/weisberg.jpg", 'rb')
+        pic = open("goods/pivo/Вайсберг.jpg", 'rb')
         pennij_bot.send_photo(message.chat.id, pic, 'Домашнее',
                               reply_markup=markup)
     elif message.text == 'Регион 82':
@@ -118,7 +120,7 @@ def user_messages(message):
         btn1 = types.KeyboardButton('🛒 Добавить "Регион 82"')
         btn2 = types.KeyboardButton('↩️ Назад к пиву')
         markup.row(btn1, btn2)
-        pic = open("goods/pivo/weisberg.jpg", 'rb')
+        pic = open("goods/pivo/Вайсберг.jpg", 'rb')
         pennij_bot.send_photo(message.chat.id, pic, 'Регион 82',
                               reply_markup=markup)
     elif message.text == 'Чешское Элитное':
@@ -126,7 +128,7 @@ def user_messages(message):
         btn1 = types.KeyboardButton('🛒 Добавить "Чешское Элитное"')
         btn2 = types.KeyboardButton('↩️ Назад к пиву')
         markup.row(btn1, btn2)
-        pic = open("goods/pivo/weisberg.jpg", 'rb')
+        pic = open("goods/pivo/Вайсберг.jpg", 'rb')
         pennij_bot.send_photo(message.chat.id, pic, 'Чешское Элитное',
                               reply_markup=markup)
     elif message.text == 'Чешское Нефильтр':
@@ -134,7 +136,7 @@ def user_messages(message):
         btn1 = types.KeyboardButton('🛒 Добавить "Чешское Нефильтр"')
         btn2 = types.KeyboardButton('↩️ Назад к пиву')
         markup.row(btn1, btn2)
-        pic = open("goods/pivo/weisberg.jpg", 'rb')
+        pic = open("goods/pivo/Вайсберг.jpg", 'rb')
         pennij_bot.send_photo(message.chat.id, pic, 'Чешское Нефильтр',
                               reply_markup=markup)
     elif message.text == 'Хорватское':
@@ -142,7 +144,7 @@ def user_messages(message):
         btn1 = types.KeyboardButton('🛒 Добавить "Хорватское"')
         btn2 = types.KeyboardButton('↩️ Назад к пиву')
         markup.row(btn1, btn2)
-        pic = open("goods/pivo/weisberg.jpg", 'rb')
+        pic = open("goods/pivo/Вайсберг.jpg", 'rb')
         pennij_bot.send_photo(message.chat.id, pic, 'Хорватское',
                               reply_markup=markup)
 
@@ -458,5 +460,40 @@ def goodsChapter(message):
     pennij_bot.send_message(message.chat.id, 'Всего лишь лучшее пиво в городе😉',
                             reply_markup=markup)
 
+
+def smartBottles(liters, price):
+    # Если литров не 0
+    if liters > 0:
+        liters_price = price * liters
+        print(f'{liters}л = {liters_price}р')
+        big_bottles = liters // 1.5
+        small_bottles = False
+        extrasmall_bottles = False
+        remainder = liters % 1.5
+        if remainder.is_integer():
+            small_bottles = remainder
+        else:
+            extrasmall_bottles = remainder
+
+        if (liters / 1.5).is_integer():
+            bottles_price = int(big_bottles) * 15
+            return f"1.5L x {int(big_bottles)} = {bottles_price}р" \
+                   f"\ntotal ammount: {bottles_price + liters_price}р"
+        elif small_bottles:
+            if big_bottles:
+                bottles_price = (int(big_bottles) + int(small_bottles)) * 15
+                return f"1.5L x {int(big_bottles)} \n1L x {int(small_bottles)} = {bottles_price}р" \
+                       f"\ntotal ammount: {bottles_price + liters_price}р"
+            else:
+                bottles_price = int(small_bottles) * 15
+                return f"1L x {int(small_bottles)} = {bottles_price}р" \
+                       f"\ntotal ammount: {bottles_price + liters_price}р"
+        elif extrasmall_bottles:
+            bottles_price = int(big_bottles) * 15 + 13
+            return f"1.5L x {int(big_bottles)} \n0.5L x 1 = {bottles_price}р" \
+                   f"\ntotal ammount: {bottles_price + liters_price}р"
+    # Если литров 0
+    else:
+        return 'Литров не может быть 0'
 
 pennij_bot.polling(none_stop=True)
