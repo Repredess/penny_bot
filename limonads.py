@@ -5,7 +5,7 @@ bot = telebot.TeleBot(BOT_TOKEN)
 
 lemonade_a = 1000
 lemonade_b = 1000
-lemonade_c = 1000
+lemonade_c = 3000
 cart = {}
 
 @bot.message_handler(commands=['start'])

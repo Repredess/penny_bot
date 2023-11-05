@@ -2,27 +2,32 @@ from telebot import types
 import telebot
 import webbrowser
 import random
-from config import BOT_TOKEN
-from assortiment import beer, cidre
+from config import BOT_TOKEN, URL, ANSWERS, ADMIN_ID
+from assortiment import beer, cidre, crackers, knuts, fish, cheese, all_goods
 
 """
-🧺🛒📲🧿🎉📖
+Что бы бот заработал - следует создать файл config.py в корневой папке проекта и задать там переменную BOT_TOKEN
+содержащую токен Вашего бота. Так же можно создать переменную URL в которой указывается нужный Вам сайт.
+
 Команды для бота:
 start - Вернуться к началу
 help - Увидеть все команды
 site - Перейти на сайт
+
+Полезные emojis:
+🧺🛒📲🧿🎉📖
 """
 
 pennij_bot = telebot.TeleBot(BOT_TOKEN)
-URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
 
-answers = ['Я не понял, что ты хочешь сказать😲', 'Извини, я тебя не понимаю😅', 'Я не знаю такой команды🤔',
-           'Я не понимаю о чем ты🙃']
+cart = {}
+
+# Если нужно сделать объявление(о какой либо новинке или акции или или) достаточно написать в announcment нужный текст
 
 announcment = False
 
 
-# announcment = "Советуем пропробовать наше новое пиво 'Новое пиво'"
+# announcment = "Кстати попробуйте новую рыбу"
 
 
 @pennij_bot.message_handler(commands=["start"])
@@ -65,7 +70,7 @@ def beer_add(message):
     add_poltora = telebot.types.InlineKeyboardButton('+1.5', callback_data=f'+')
     remove_liter = telebot.types.InlineKeyboardButton('-1', callback_data=f'-')
     remove_poltora = telebot.types.InlineKeyboardButton('-1.5', callback_data=f'-')
-    cart = telebot.types.InlineKeyboardButton('🛒 Корзина', callback_data=f'shoppingCart')
+    cart = telebot.types.InlineKeyboardButton('🛒 Корзина', callback_data=f'🛒 Корзина')
     markup_inline.add(remove_liter, add_liter)
     markup_inline.add(remove_poltora, add_poltora)
     if beer[item]["Подробнее"]:
@@ -92,14 +97,13 @@ def beer_add(message):
                               reply_markup=markup_inline,
                               parse_mode='html')
 
-
 @pennij_bot.message_handler(func=lambda message: message.text in cidre)
 def cidre_add(message):
     item = message.text
     markup_inline = telebot.types.InlineKeyboardMarkup()
-    add_liter = telebot.types.InlineKeyboardButton('+1', callback_data=f'+')
+    add_liter = telebot.types.InlineKeyboardButton('+1', callback_data=f'add_to_cart')
     add_poltora = telebot.types.InlineKeyboardButton('+1.5', callback_data=f'+')
-    remove_liter = telebot.types.InlineKeyboardButton('-1', callback_data=f'-')
+    remove_liter = telebot.types.InlineKeyboardButton('-1', callback_data=f'remove_from_cart')
     remove_poltora = telebot.types.InlineKeyboardButton('-1.5', callback_data=f'-')
     cart = telebot.types.InlineKeyboardButton('🛒 Корзина', callback_data=f'shoppingCart')
     markup_inline.add(remove_liter, add_liter)
@@ -125,6 +129,175 @@ def cidre_add(message):
                               reply_markup=markup_inline,
                               parse_mode='html')
 
+
+@pennij_bot.message_handler(func=lambda message: message.text in knuts)
+def knuts_add(message):
+    item = message.text
+    markup_inline = telebot.types.InlineKeyboardMarkup()
+    add_one = telebot.types.InlineKeyboardButton('+1 шт', callback_data=f'+')
+    remove_one = telebot.types.InlineKeyboardButton('-1 шт', callback_data=f'-')
+    cart = telebot.types.InlineKeyboardButton('🛒 Корзина', callback_data=f'shoppingCart')
+    markup_inline.add(remove_one, add_one)
+    markup_inline.add(cart)
+
+    try:
+        pic = open(f"goods/knuts/{item}.jpg", 'rb')
+        pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
+                                                    f'\n{knuts[item]["Описание"]}'
+                                                    f'\nЦена: {knuts[item]["Цена"]}р/упаковка',
+                              reply_markup=markup_inline,
+                              parse_mode='html')
+    except FileNotFoundError:
+        pic = open(f'goods/knuts/Палочки.jpg', 'rb')
+        pennij_bot.send_photo(message.chat.id, pic, f'<i><b>{item}</b></i>'
+                                                    f'\n{knuts[item]["Описание"]}'
+                                                    f'\nЦена: {knuts[item]["Цена"]}р/упаковка',
+                              reply_markup=markup_inline,
+                              parse_mode='html')
+
+
+@pennij_bot.message_handler(func=lambda message: message.text in crackers)
+def crackers_add(message):
+    item = message.text
+    markup_inline = telebot.types.InlineKeyboardMarkup()
+    add_one = telebot.types.InlineKeyboardButton('+100гр', callback_data=f'+')
+    remove_one = telebot.types.InlineKeyboardButton('-100гр', callback_data=f'-')
+    cart = telebot.types.InlineKeyboardButton('🛒 Корзина', callback_data=f'shoppingCart')
+    markup_inline.add(remove_one, add_one)
+    markup_inline.add(cart)
+
+    try:
+        pic = open(f"goods/crackers/{item}.jpg", 'rb')
+        pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
+                                                    f'\n{crackers[item]["Описание"]}'
+                                                    f'\nОстрота: {crackers[item]["Острота"]}',
+                              f'\nЦена: {crackers[item]["Цена"]}р/100гр',
+                              reply_markup=markup_inline,
+                              parse_mode='html')
+    except FileNotFoundError:
+        pic = open(f'goods/crackers/crackers.jpg', 'rb')
+        pennij_bot.send_photo(message.chat.id, pic, f'<i><b>{item}</b></i>'
+                                                    f'\n{crackers[item]["Описание"]}'
+                                                    f'\nОстрота: {crackers[item]["Острота"]}'
+                                                    f'\nЦена: {crackers[item]["Цена"]}р/100гр',
+                              reply_markup=markup_inline,
+                              parse_mode='html')
+
+
+@pennij_bot.message_handler(func=lambda message: message.text in fish)
+def fish_add(message):
+    item = message.text
+    markup_inline = telebot.types.InlineKeyboardMarkup()
+    add_one = telebot.types.InlineKeyboardButton('+100гр', callback_data=f'+')
+    remove_one = telebot.types.InlineKeyboardButton('-100гр', callback_data=f'-')
+    cart = telebot.types.InlineKeyboardButton('🛒 Корзина', callback_data=f'shoppingCart')
+    markup_inline.add(remove_one, add_one)
+    markup_inline.add(cart)
+
+    try:
+        pic = open(f"goods/riba/{item}.jpg", 'rb')
+        pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
+                                                    f'\n{fish[item]["Описание"]}'
+                                                    f'\nЦена: <i>{fish[item]["Цена"]}р</i>/<b>1шт</b>',
+                              reply_markup=markup_inline,
+                              parse_mode='html')
+    except FileNotFoundError:
+        pic = open(f'goods/riba/Корюшка.jpg', 'rb')
+        pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
+                                                    f'\n{fish[item]["Описание"]}'
+                                                    f'\nЦена: <i>{fish[item]["Цена"]}р</i>/<b>1шт</b>',
+                              reply_markup=markup_inline,
+                              parse_mode='html')
+
+
+@pennij_bot.message_handler(func=lambda message: message.text in cheese)
+def cheese_add(message):
+    item = message.text
+    markup_inline = telebot.types.InlineKeyboardMarkup()
+    add_one = telebot.types.InlineKeyboardButton('+1шт', callback_data=f'+1 {item}')
+    remove_one = telebot.types.InlineKeyboardButton('-1шт', callback_data=f'-1 {item}')
+    cart = telebot.types.InlineKeyboardButton('🛒 Корзина', callback_data=f'shoppingCart')
+    markup_inline.add(remove_one, add_one)
+    markup_inline.add(cart)
+
+    try:
+        pic = open(f"goods/cheese/{item}.jpg", 'rb')
+        pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
+                                                    f'\n{cheese[item]["Описание"]}'
+                                                    f'\nЦена: <i>{cheese[item]["Цена"]}р</i>/<b>1шт</b>',
+                              reply_markup=markup_inline,
+                              parse_mode='html')
+    except FileNotFoundError:
+        pic = open(f'goods/cheese/Сыр косичка.jpg', 'rb')
+        pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
+                                                    f'\n{cheese[item]["Описание"]}'
+                                                    f'\nЦена: <i>{cheese[item]["Цена"]}р</i>/<b>1шт</b>',
+                              reply_markup=markup_inline,
+                              parse_mode='html')
+
+
+@pennij_bot.callback_query_handler(func=lambda callback: callback.data == "shoppingCart")
+def show_cart(callback):
+    pennij_bot.answer_callback_query(callback.id, f'Итого: деньги')
+    pennij_bot.send_message(callback.message.chat.id, f'Корзина: \n{cart}')
+
+
+@pennij_bot.callback_query_handler(func=lambda callback: True)
+def purchase_callback(callback):
+    global cart
+    if callback.data.startswith("+1"):
+        option = 1
+        item = callback.data.lstrip("+1 ")
+        print(option, item, callback.id)
+        add_to_cart(callback, item, option)
+    elif callback.data.startswith("+100"):
+        option = 0.1
+        item = callback.data.lstrip("+100 ")
+        print(option, item)
+        add_to_cart(callback, item, option)
+        pennij_bot.answer_callback_query(callback.id, f'{item} в корзине: {cart[callback.message.chat.id][item]}')
+    elif callback.data.startswith("-1"):
+        if callback.message.chat.id in cart:
+            option = 1
+            item = callback.data.lstrip("-1 ")
+            print(option, item)
+            remove_from_cart(callback, item, option)
+        else:
+            pennij_bot.answer_callback_query(callback.id, f'Корзина пуста')
+    elif callback.data.startswith("-100"):
+        if callback.message.chat.id in cart:
+            option = 1
+            item = callback.data.lstrip("-100 ")
+            print(option, item)
+            remove_from_cart(callback, item, option)
+            pennij_bot.answer_callback_query(callback.id, f'{item} удален из корзины: {cart[callback.message.chat.id][item]}')
+        else:
+            pennij_bot.answer_callback_query(callback.id, f'Корзина пуста')
+
+
+def add_to_cart(callback, item, option):
+    if callback.message.chat.id not in cart:
+        cart.update({callback.message.chat.id: {}})
+        cart[callback.message.chat.id][item] = cart.get(item, 0) + option
+        print(cart)
+        pennij_bot.answer_callback_query(callback.id, f'{item} в корзине: {cart[callback.message.chat.id][item]}')
+    else:
+        cart[callback.message.chat.id][item] = cart[callback.message.chat.id].get(item, 0) + option
+        pennij_bot.answer_callback_query(callback.id, f'{item} в корзине: {cart[callback.message.chat.id][item]}')
+        print(cart)
+
+
+def remove_from_cart(callback, item, option):
+    if cart[callback.message.chat.id].get(item, 0) == 0:
+        pennij_bot.answer_callback_query(callback.id, f'{item} в корзине нет!')
+        print(cart)
+    else:
+        cart[callback.message.chat.id][item] = cart[callback.message.chat.id].get(item) - option
+        pennij_bot.answer_callback_query(callback.id,
+                                         f'{item} удален из корзины: {cart[callback.message.chat.id][item]}')
+        print(cart)
+
+
 @pennij_bot.message_handler()
 def user_messages(message):
     # Кнопки главного меню
@@ -139,6 +312,8 @@ def user_messages(message):
                                 '\n'
                                 '\n<b>Разаработчик</b> - <u>@repredess</u>',
                                 parse_mode='html')
+    elif message.text == '🛒 Корзина':
+        show_cart_button(message)
 
     # Кнопка "ПИВО"
     elif message.text == 'Пиво':
@@ -151,100 +326,9 @@ def user_messages(message):
     #     pic = open("goods/pivo/Вайсберг.jpg", 'rb')
     #     pennij_bot.send_photo(message.chat.id, pic, 'Нежное пиво с сливочным послевкусием. Алкоголь 4.7.',
     #                           reply_markup=markup)
-    # elif message.text == 'Янтарное':
-    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    #     btn1 = types.KeyboardButton('🛒 Добавить "Янтарное"')
-    #     btn2 = types.KeyboardButton('↩️ Назад к пиву')
-    #     markup.row(btn1, btn2)
-    #     pic = open("goods/pivo/Вайсберг.jpg", 'rb')
-    #     pennij_bot.send_photo(message.chat.id, pic, 'Янтарное',
-    #                           reply_markup=markup)
-    # elif message.text == 'Штормовое':
-    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    #     btn1 = types.KeyboardButton('🛒 Добавить "Штормовое"')
-    #     btn2 = types.KeyboardButton('↩️ Назад к пиву')
-    #     markup.row(btn1, btn2)
-    #     pic = open("goods/pivo/Вайсберг.jpg", 'rb')
-    #     pennij_bot.send_photo(message.chat.id, pic, 'Штормовое',
-    #                           reply_markup=markup)
-    # elif message.text == 'Стаут':
-    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    #     btn1 = types.KeyboardButton('🛒 Добавить "Стаут"')
-    #     btn2 = types.KeyboardButton('↩️ Назад к пиву')
-    #     markup.row(btn1, btn2)
-    #     pic = open("goods/pivo/Вайсберг.jpg", 'rb')
-    #     pennij_bot.send_photo(message.chat.id, pic, 'Стаут',
-    #                           reply_markup=markup)
-    # elif message.text == 'Домашнее':
-    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    #     btn1 = types.KeyboardButton('🛒 Добавить "Домашнее"')
-    #     btn2 = types.KeyboardButton('↩️ Назад к пиву')
-    #     markup.row(btn1, btn2)
-    #     pic = open("goods/pivo/Вайсберг.jpg", 'rb')
-    #     pennij_bot.send_photo(message.chat.id, pic, 'Домашнее',
-    #                           reply_markup=markup)
-    # elif message.text == 'Регион 82':
-    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    #     btn1 = types.KeyboardButton('🛒 Добавить "Регион 82"')
-    #     btn2 = types.KeyboardButton('↩️ Назад к пиву')
-    #     markup.row(btn1, btn2)
-    #     pic = open("goods/pivo/Вайсберг.jpg", 'rb')
-    #     pennij_bot.send_photo(message.chat.id, pic, 'Регион 82',
-    #                           reply_markup=markup)
-    # elif message.text == 'Чешское Элитное':
-    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    #     btn1 = types.KeyboardButton('🛒 Добавить "Чешское Элитное"')
-    #     btn2 = types.KeyboardButton('↩️ Назад к пиву')
-    #     markup.row(btn1, btn2)
-    #     pic = open("goods/pivo/Вайсберг.jpg", 'rb')
-    #     pennij_bot.send_photo(message.chat.id, pic, 'Чешское Элитное',
-    #                           reply_markup=markup)
-    # elif message.text == 'Чешское Нефильтр':
-    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    #     btn1 = types.KeyboardButton('🛒 Добавить "Чешское Нефильтр"')
-    #     btn2 = types.KeyboardButton('↩️ Назад к пиву')
-    #     markup.row(btn1, btn2)
-    #     pic = open("goods/pivo/Вайсберг.jpg", 'rb')
-    #     pennij_bot.send_photo(message.chat.id, pic, 'Чешское Нефильтр',
-    #                           reply_markup=markup)
-    # elif message.text == 'Хорватское':
-    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    #     btn1 = types.KeyboardButton('🛒 Добавить "Хорватское"')
-    #     btn2 = types.KeyboardButton('↩️ Назад к пиву')
-    #     markup.row(btn1, btn2)
-    #     pic = open("goods/pivo/Вайсберг.jpg", 'rb')
-    #     pennij_bot.send_photo(message.chat.id, pic, 'Хорватское',
-    #                           reply_markup=markup)
-
-    # Кнопка "СИДРЫ"
     elif message.text == 'Сидры':
         chooseSidre(message)
-    # elif message.text == 'Голубая лагуна':
-    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    #     btn1 = types.KeyboardButton('🛒 Добавить "Голубая лагуна"')
-    #     btn2 = types.KeyboardButton('↩️ Назад к сидрам')
-    #     markup.row(btn1, btn2)
-    #     pic = open("goods/ciders/laguna.png", 'rb')
-    #     pennij_bot.send_photo(message.chat.id, pic, 'Вкуснятина голубого цвета. Райское наслаждение',
-    #                           reply_markup=markup)
-    # elif message.text == 'Шампань':
-    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    #     btn1 = types.KeyboardButton('🛒 Добавить "Шампань"')
-    #     btn2 = types.KeyboardButton('↩️ Назад к сидрам')
-    #     markup.row(btn1, btn2)
-    #     pic = open("goods/ciders/laguna.png", 'rb')
-    #     pennij_bot.send_photo(message.chat.id, pic, 'Шампань',
-    #                           reply_markup=markup)
-    # elif message.text == 'Сицилийский апельсин':
-    #     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    #     btn1 = types.KeyboardButton('🛒 Добавить "Сицилийский апельсин"')
-    #     btn2 = types.KeyboardButton('↩️ Назад к сидрам')
-    #     markup.row(btn1, btn2)
-    #     pic = open("goods/ciders/laguna.png", 'rb')
-    #     pennij_bot.send_photo(message.chat.id, pic, 'Сицилийский апельсин',
-    #                           reply_markup=markup)
 
-    # Кнопка "БЕЗАЛКОГОЛЬНОЕ"
     elif message.text == 'Безалкогольное':
         pennij_bot.send_message(message.chat.id, 'Безалкогольного пока нет \nМало того - ты еще не выпил штрафную')
 
@@ -254,151 +338,13 @@ def user_messages(message):
     # Виды снеков
     elif message.text == 'Сухарики':
         chooseCrackers(message)
-    elif message.text == 'Сыр косичка':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить косичку')
-        btn2 = types.KeyboardButton('↩️ Назад к снекам')
-        markup.row(btn1, btn2)
-        pennij_bot.send_message(message.chat.id, 'Упругая и соленая', reply_markup=markup)
     elif message.text == 'Кнуты и палочки':
         chooseSticks(message)
-    # Виды сухариков
-    elif message.text == 'Деревенские':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Деревенские"')
-        btn2 = types.KeyboardButton('↩️ Назад к сухарикам')
-        markup.row(btn1, btn2)
-        pic = open("goods/crackers/crackers.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Сухарики со вкусом сало-горчица. \nОстрота: [*][*][*]',
-                              reply_markup=markup)
-    elif message.text == 'Тайский перец':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Тайский перец"')
-        btn2 = types.KeyboardButton('↩️ Назад к сухарикам')
-        markup.row(btn1, btn2)
-        pic = open("goods/crackers/crackers.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Сухарики со вкусом тайский перец. \nОстрота: [*][][]',
-                              reply_markup=markup)
-    elif message.text == 'Сливочный сыр':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Сливочный сыр"')
-        btn2 = types.KeyboardButton('↩️ Назад к сухарикам')
-        markup.row(btn1, btn2)
-        pic = open("goods/crackers/crackers.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Сухарики со вкусом вкусом сливочный сыр. \nОстрота: не острые',
-                              reply_markup=markup)
-    elif message.text == 'Ветчина-сыр':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Ветчина-сыр"')
-        btn2 = types.KeyboardButton('↩️ Назад к сухарикам')
-        markup.row(btn1, btn2)
-        pic = open("goods/crackers/crackers.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Сухарики со вкусом ветчина-сыр. \nОстрота: не острые',
-                              reply_markup=markup)
-    elif message.text == 'Аджика':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Аджика"')
-        btn2 = types.KeyboardButton('↩️ Назад к сухарикам')
-        markup.row(btn1, btn2)
-        pic = open("goods/crackers/crackers.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Сухарики со вкусом аджики. \nОстрота: не острые',
-                              reply_markup=markup)
-    elif message.text == 'Чесночный микс':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Чесночный микс"')
-        btn2 = types.KeyboardButton('↩️ Назад к сухарикам')
-        markup.row(btn1, btn2)
-        pic = open("goods/crackers/crackers.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Сухарики со вкусом чесночка. \nОстрота: не острые',
-                              reply_markup=markup)
-    elif message.text == 'Краб':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Краб"')
-        btn2 = types.KeyboardButton('↩️ Назад к сухарикам')
-        markup.row(btn1, btn2)
-        pic = open("goods/crackers/crackers.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Сухарики со вкусом краба. \nОстрота: не острые',
-                              reply_markup=markup)
-    # Виды рыбных палочек
-    elif message.text == 'Мясные кнуты':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Мясные кнуты"')
-        btn2 = types.KeyboardButton('↩️ Назад к палочкам')
-        markup.row(btn1, btn2)
-        pennij_bot.send_message(message.chat.id, 'Мясные кнуты из говядины', reply_markup=markup)
-    elif message.text == 'Палочки из щуки':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Палочки из щуки""')
-        btn2 = types.KeyboardButton('↩️ Назад к палочкам')
-        markup.row(btn1, btn2)
-        pennij_bot.send_message(message.chat.id, 'Рыбные палочки из щуки', reply_markup=markup)
-    elif message.text == 'Палочки из тунца':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Палочки из тунца"')
-        btn2 = types.KeyboardButton('↩️ Назад к палочкам')
-        markup.row(btn1, btn2)
-        pennij_bot.send_message(message.chat.id, 'Рыбные палочки из тунца', reply_markup=markup)
-    elif message.text == 'Палочки из лосося':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить "Палочки из лосося"')
-        btn2 = types.KeyboardButton('↩️ Назад к палочкам')
-        markup.row(btn1, btn2)
-        pennij_bot.send_message(message.chat.id, 'Рыбные палочки из лосося', reply_markup=markup)
-
-    # Кнопка "РЫБКА"
     elif message.text == 'Рыбка':
         chooseFish(message)
-    # Виды рыбки
-    elif message.text == 'Корюшка':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить корюшки')
-        btn2 = types.KeyboardButton('↩️ Назад к рыбке')
-        markup.row(btn1, btn2)
-        pic = open("goods/riba/koryushka.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Нежная слабо-соленая рыбка без косточек.',
-                              reply_markup=markup)
-    elif message.text == 'Тарань':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить тараньки')
-        btn2 = types.KeyboardButton('↩️ Назад к рыбке')
-        markup.row(btn1, btn2)
-        pic = open("goods/riba/koryushka.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Рыба рыба рыба',
-                              reply_markup=markup)
-    elif message.text == 'Горбуша (копченая)':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить горбуши')
-        btn2 = types.KeyboardButton('↩️ Назад к рыбке')
-        markup.row(btn1, btn2)
-        pic = open("goods/riba/koryushka.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Рыба рыба рыба',
-                              reply_markup=markup)
-    elif message.text == 'Густера':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить густеры')
-        btn2 = types.KeyboardButton('↩️ Назад к рыбке')
-        markup.row(btn1, btn2)
-        pic = open("goods/riba/koryushka.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Рыба рыба рыба.',
-                              reply_markup=markup)
-    elif message.text == 'Лещ':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить леща')
-        btn2 = types.KeyboardButton('↩️ Назад к рыбке')
-        markup.row(btn1, btn2)
-        pic = open("goods/riba/koryushka.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Рыба рыба рыба',
-                              reply_markup=markup)
-    elif message.text == 'Бычки':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton('🛒 Добавить бычков')
-        btn2 = types.KeyboardButton('↩️ Назад к рыбке')
-        markup.row(btn1, btn2)
-        pic = open("goods/riba/koryushka.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, 'Рыба рыба рыба',
-                              reply_markup=markup)
+    elif message.text == 'Сыры':
+        chooseCheese(message)
 
-    # Кнопки возврата
     elif message.text == '↩️ Назад':
         goodsChapter(message)
     elif message.text == '↩️ Назад к ассортименту':
@@ -418,8 +364,23 @@ def user_messages(message):
     elif message.text == '↩️ Назад к палочкам':
         chooseSticks(message)
     else:
-        pennij_bot.reply_to(message, f'{random.choice(answers)} \n<b>Вернуться на главную</b>: <u>/start</u>',
+        pennij_bot.reply_to(message, f'{random.choice(ANSWERS)} \n<b>Вернуться на главную</b>: <u>/start</u>',
                             parse_mode='html')
+
+
+def send_to_admin(message):
+    id = message.from_user.id
+    print(message)
+    if id == ADMIN_ID:
+        print(f"Admin is HEREEE🫡. Name {message.from_user.first_name}")
+        pennij_bot.send_message(ADMIN_ID, "Its Admin's ID")
+    elif id != ADMIN_ID:
+        print(f'Somebody wanna find some. His ID = {id}. Name {message.from_user.first_name}')
+        pennij_bot.send_message(ADMIN_ID, f'Somebody come to find for some beer. His ID = {id}')
+
+
+def show_cart_button(message):
+    pennij_bot.send_message(message.chat.id, f"{cart}")
 
 
 def chooseSticks(message):
@@ -455,13 +416,22 @@ def chooseCrackers(message):
 def chooseSnacs(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton("Сухарики")
-    btn2 = types.KeyboardButton("Сыр косичка")
+    btn2 = types.KeyboardButton("Сыры")
     btn3 = types.KeyboardButton("Кнуты и палочки")
     btn4 = types.KeyboardButton("↩️ Назад к ассортименту")
     markup.row(btn1, btn2)
     markup.row(btn3, btn4)
 
     pennij_bot.send_message(message.chat.id, 'Каждый месяц что-то новое😋', reply_markup=markup)
+
+
+def chooseCheese(message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    btn1 = types.KeyboardButton("Сыр косичка")
+    btn2 = types.KeyboardButton("↩️ Назад к ассортименту")
+    markup.row(btn1, btn2)
+
+    pennij_bot.send_message(message.chat.id, 'Упругие и вкусные😋 \nВыбирай:', reply_markup=markup)
 
 
 def chooseSidre(message):
@@ -520,8 +490,8 @@ def goodsChapter(message):
     btn6 = types.KeyboardButton("↩️ Назад в меню")
     btn7 = types.KeyboardButton("🛒 Корзина")
     markup.row(btn1, btn2)
-    markup.row(btn3, btn7)
-    markup.row(btn5, btn4, btn6)
+    markup.row(btn3, btn5)
+    markup.row(btn7, btn4, btn6)
 
     if announcment:
         pennij_bot.send_message(message.chat.id, announcment)
@@ -566,4 +536,6 @@ def smartBottles(liters, price):
         return 'Литров не может быть 0'
 
 
-pennij_bot.polling(none_stop=True)
+#https://stackoverflow.com/questions/68739567/socket-timeout-on-telegram-bot-polling
+pennij_bot.infinity_polling(timeout=10, long_polling_timeout=5)
+# pennij_bot.polling(none_stop=True)
