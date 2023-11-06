@@ -1,5 +1,6 @@
 from telebot import types
 import telebot
+import time
 import webbrowser
 import random
 from config import BOT_TOKEN, URL, ANSWERS, ADMIN_ID
@@ -16,6 +17,9 @@ site - Перейти на сайт
 
 Полезные emojis:
 🧺🛒📲🧿🎉📖
+
+Нужно добавить:
+Очистку корзины
 """
 
 pennij_bot = telebot.TeleBot(BOT_TOKEN)
@@ -96,6 +100,7 @@ def beer_add(message):
                                                     f'Алкоголь: {beer[item]["Алкоголь"]}',
                               reply_markup=markup_inline,
                               parse_mode='html')
+
 
 @pennij_bot.message_handler(func=lambda message: message.text in cidre)
 def cidre_add(message):
@@ -188,8 +193,8 @@ def crackers_add(message):
 def fish_add(message):
     item = message.text
     markup_inline = telebot.types.InlineKeyboardMarkup()
-    add_one = telebot.types.InlineKeyboardButton('+100гр', callback_data=f'+')
-    remove_one = telebot.types.InlineKeyboardButton('-100гр', callback_data=f'-')
+    add_one = telebot.types.InlineKeyboardButton('+100гр', callback_data=f'+100 {item}')
+    remove_one = telebot.types.InlineKeyboardButton('-100гр', callback_data=f'-100 {item}')
     cart = telebot.types.InlineKeyboardButton('🛒 Корзина', callback_data=f'shoppingCart')
     markup_inline.add(remove_one, add_one)
     markup_inline.add(cart)
@@ -238,39 +243,54 @@ def cheese_add(message):
 
 @pennij_bot.callback_query_handler(func=lambda callback: callback.data == "shoppingCart")
 def show_cart(callback):
-    pennij_bot.answer_callback_query(callback.id, f'Итого: деньги')
-    pennij_bot.send_message(callback.message.chat.id, f'Корзина: \n{cart}')
+    if callback.message.chat.id in cart:
+        if cart[callback.message.chat.id]:
+            pennij_bot.answer_callback_query(callback.id, f'Итого: деньги')
+            pennij_bot.send_message(callback.message.chat.id, f'Корзина: \n{cart}')
+        else:
+            pennij_bot.answer_callback_query(callback.id, f'Корзина пуста')
+    else:
+        pennij_bot.answer_callback_query(callback.id, f'Корзина пуста')
 
 
 @pennij_bot.callback_query_handler(func=lambda callback: True)
 def purchase_callback(callback):
     global cart
-    if callback.data.startswith("+1"):
+    callback_request = callback.data.split()[0]
+    print(f"{callback_request} - callback_request")
+    if callback_request == "+1":
         option = 1
-        item = callback.data.lstrip("+1 ")
-        print(option, item, callback.id)
+        item = " ".join(callback.data.split()[1:])
         add_to_cart(callback, item, option)
-    elif callback.data.startswith("+100"):
+    elif callback_request == "+100":
         option = 0.1
-        item = callback.data.lstrip("+100 ")
-        print(option, item)
+        item = callback.data.split()[1]
         add_to_cart(callback, item, option)
         pennij_bot.answer_callback_query(callback.id, f'{item} в корзине: {cart[callback.message.chat.id][item]}')
-    elif callback.data.startswith("-1"):
+    elif callback_request == "-1":
         if callback.message.chat.id in cart:
             option = 1
             item = callback.data.lstrip("-1 ")
-            print(option, item)
-            remove_from_cart(callback, item, option)
+            try:
+                remove_from_cart(callback, item, option)
+                pennij_bot.answer_callback_query(callback.id,
+                                                 f'{item} удален из корзины: {cart[callback.message.chat.id][item]}')
+            except KeyError:
+                pennij_bot.answer_callback_query(callback.id,
+                                                 f'{item} отсутствует в корзине')
         else:
             pennij_bot.answer_callback_query(callback.id, f'Корзина пуста')
-    elif callback.data.startswith("-100"):
+    elif callback_request == "-100":
         if callback.message.chat.id in cart:
-            option = 1
+            option = 0.1
             item = callback.data.lstrip("-100 ")
-            print(option, item)
-            remove_from_cart(callback, item, option)
-            pennij_bot.answer_callback_query(callback.id, f'{item} удален из корзины: {cart[callback.message.chat.id][item]}')
+            try:
+                remove_from_cart(callback, item, option)
+                pennij_bot.answer_callback_query(callback.id,
+                                                 f'{item} удален из корзины: {cart[callback.message.chat.id][item]}')
+            except KeyError:
+                pennij_bot.answer_callback_query(callback.id,
+                                                 f'{item} отсутствует в корзине')
         else:
             pennij_bot.answer_callback_query(callback.id, f'Корзина пуста')
 
@@ -278,24 +298,30 @@ def purchase_callback(callback):
 def add_to_cart(callback, item, option):
     if callback.message.chat.id not in cart:
         cart.update({callback.message.chat.id: {}})
-        cart[callback.message.chat.id][item] = cart.get(item, 0) + option
-        print(cart)
+        cart[callback.message.chat.id][item] = round(cart[callback.message.chat.id].get(item, 0) + option, 1)
+        print(cart, item)
         pennij_bot.answer_callback_query(callback.id, f'{item} в корзине: {cart[callback.message.chat.id][item]}')
     else:
-        cart[callback.message.chat.id][item] = cart[callback.message.chat.id].get(item, 0) + option
+        cart[callback.message.chat.id][item] = round(cart[callback.message.chat.id].get(item, 0) + option, 1)
+        print(cart, item)
         pennij_bot.answer_callback_query(callback.id, f'{item} в корзине: {cart[callback.message.chat.id][item]}')
         print(cart)
 
 
 def remove_from_cart(callback, item, option):
-    if cart[callback.message.chat.id].get(item, 0) == 0:
-        pennij_bot.answer_callback_query(callback.id, f'{item} в корзине нет!')
+    try:
+        cart[callback.message.chat.id].get(item)
+        if cart[callback.message.chat.id].get(item, 0) == 1 or cart[callback.message.chat.id].get(item, 0) == 0.1:
+            pennij_bot.answer_callback_query(callback.id, f'{item} - удалено из корзины')
+            del cart[callback.message.chat.id][item]
+        else:
+            cart[callback.message.chat.id][item] = round(cart[callback.message.chat.id].get(item) - option, 1)
+            pennij_bot.answer_callback_query(callback.id,
+                                             f'{item} убрано из корзины: {cart[callback.message.chat.id][item]}')
         print(cart)
-    else:
-        cart[callback.message.chat.id][item] = cart[callback.message.chat.id].get(item) - option
+    except TypeError:
         pennij_bot.answer_callback_query(callback.id,
-                                         f'{item} удален из корзины: {cart[callback.message.chat.id][item]}')
-        print(cart)
+                                         f'{item} - нет в корзине')
 
 
 @pennij_bot.message_handler()
@@ -380,7 +406,14 @@ def send_to_admin(message):
 
 
 def show_cart_button(message):
-    pennij_bot.send_message(message.chat.id, f"{cart}")
+    cartID = message.chat.id
+    if cartID in cart:
+        if cart[cartID]:
+            pennij_bot.send_message(message.chat.id, f"Корзина:\n{cart}")
+        else:
+            pennij_bot.send_message(message.chat.id, f"Корзина пуста")
+    else:
+        pennij_bot.send_message(message.chat.id, f"Корзина пуста")
 
 
 def chooseSticks(message):
@@ -536,6 +569,27 @@ def smartBottles(liters, price):
         return 'Литров не может быть 0'
 
 
-#https://stackoverflow.com/questions/68739567/socket-timeout-on-telegram-bot-polling
-pennij_bot.infinity_polling(timeout=10, long_polling_timeout=5)
+def go_infinity():
+    print("some troubles with network")
+    try:
+        # https://stackoverflow.com/questions/68739567/socket-timeout-on-telegram-bot-polling
+        pennij_bot.infinity_polling(timeout=10, long_polling_timeout=5)
+        pennij_bot.send_message(message_chat.id, "Проблемы с сервером... Подождите минутку")
+        # pennij_bot.polling(none_stop=True)
+    except requests.exceptions.ConnectionError:
+        pennij_bot.infinity_polling(timeout=10, long_polling_timeout=5)
+    time.sleep(5)
+
+
+try:
+    # https://stackoverflow.com/questions/68739567/socket-timeout-on-telegram-bot-polling
+    pennij_bot.infinity_polling(timeout=10, long_polling_timeout=5)
+except requests.exceptions.ConnectionError:
+    print("Траблы ConnectionError")
+    pennij_bot.infinity_polling(timeout=10, long_polling_timeout=5)
+except requests.exceptions.ReadTimeout:
+    print("Траблы ReadTimeout")
+    pennij_bot.infinity_polling(timeout=10, long_polling_timeout=5)
+
+# Стандарт который у меня был:
 # pennij_bot.polling(none_stop=True)
