@@ -1,7 +1,6 @@
 from telebot import types
 import telebot
 import time
-import webbrowser
 import random
 from config import BOT_TOKEN, URL, ANSWERS, ADMIN_ID
 from assortiment import beer, cidre, crackers, knuts, fish, cheese, all_goods
@@ -24,12 +23,15 @@ chooseНУЖНЫЙ_ТОВАР так, что бы у кнопки было та�
 
 Нужно добавить:
 Адекватное отображение корзины
+Обновление корзины
+Подсчет итоговой суммы корзины
 Очистку корзины
 Оформление заказа
 Добавление заказа в текстовый документ
 Отправка заказа админам в ТГ
 Отправка заказа на почту
 Запрос контакта
+Запрос коммантария к заказу
 Запрос адреса
 """
 
@@ -39,10 +41,9 @@ cart = {}
 
 # Если нужно сделать объявление(о какой либо новинке или акции или или) достаточно написать в announcment нужный текст
 
-announcment = False
 
-
-# announcment = "Кстати попробуйте новую рыбу"
+# announcment = False
+announcment = "Советуем попробовать новые сидры: Глинтвейн🍷 и Манго-маракуйя🥭"
 
 
 @pennij_bot.message_handler(commands=["start"])
@@ -66,7 +67,6 @@ def redirect_to_site(message):
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("Перейти на сайт", url=URL))
     pennij_bot.send_message(message.chat.id, "Ах да, вот ссылочка:", reply_markup=markup)
-    webbrowser.open(URL)
 
 
 @pennij_bot.message_handler(commands=["help"])
@@ -81,10 +81,10 @@ def get_help(message):
 def beer_add(message):
     item = message.text
     markup_inline = telebot.types.InlineKeyboardMarkup()
-    add_liter = telebot.types.InlineKeyboardButton('+1', callback_data=f'+1 Пиво {item}')
-    add_poltora = telebot.types.InlineKeyboardButton('+1.5', callback_data=f'+')
-    remove_liter = telebot.types.InlineKeyboardButton('-1', callback_data=f'-1 Пиво {item}')
-    remove_poltora = telebot.types.InlineKeyboardButton('-1.5', callback_data=f'-')
+    add_liter = telebot.types.InlineKeyboardButton('+1л', callback_data=f'+1.0 Пиво {item}')
+    add_poltora = telebot.types.InlineKeyboardButton('+1.5л', callback_data=f'+1.5 Пиво {item}')
+    remove_liter = telebot.types.InlineKeyboardButton('-1л', callback_data=f'-1.0 Пиво {item}')
+    remove_poltora = telebot.types.InlineKeyboardButton('-1.5л', callback_data=f'-1.5 Пиво {item}')
     cart = telebot.types.InlineKeyboardButton('🛒 Корзина', callback_data=f'shoppingCart')
     markup_inline.add(remove_liter, add_liter)
     markup_inline.add(remove_poltora, add_poltora)
@@ -117,10 +117,10 @@ def beer_add(message):
 def cidre_add(message):
     item = message.text
     markup_inline = telebot.types.InlineKeyboardMarkup()
-    add_liter = telebot.types.InlineKeyboardButton('+1', callback_data=f'+1 Сидр {item}')
-    add_poltora = telebot.types.InlineKeyboardButton('+1.5', callback_data=f'+')
-    remove_liter = telebot.types.InlineKeyboardButton('-1', callback_data=f'-1 Сидр {item}')
-    remove_poltora = telebot.types.InlineKeyboardButton('-1.5', callback_data=f'-')
+    add_liter = telebot.types.InlineKeyboardButton('+1л', callback_data=f'+1.0 Сидр {item}')
+    add_poltora = telebot.types.InlineKeyboardButton('+1.5л', callback_data=f'+1.5 Сидр {item}')
+    remove_liter = telebot.types.InlineKeyboardButton('-1л', callback_data=f'-1.0 Сидр {item}')
+    remove_poltora = telebot.types.InlineKeyboardButton('-1.5л', callback_data=f'-1.5 Сидр {item}')
     cart = telebot.types.InlineKeyboardButton('🛒 Корзина', callback_data=f'shoppingCart')
     markup_inline.add(remove_liter, add_liter)
     markup_inline.add(remove_poltora, add_poltora)
@@ -150,8 +150,8 @@ def cidre_add(message):
 def knuts_add(message):
     item = message.text
     markup_inline = telebot.types.InlineKeyboardMarkup()
-    add_one = telebot.types.InlineKeyboardButton('+1 шт', callback_data=f'+1 Закуска {item}')
-    remove_one = telebot.types.InlineKeyboardButton('-1 шт', callback_data=f'-1 Закуска {item}')
+    add_one = telebot.types.InlineKeyboardButton('+1шт', callback_data=f'+1 Закуска {item}')
+    remove_one = telebot.types.InlineKeyboardButton('-1шт', callback_data=f'-1 Закуска {item}')
     cart = telebot.types.InlineKeyboardButton('🛒 Корзина', callback_data=f'shoppingCart')
     markup_inline.add(remove_one, add_one)
     markup_inline.add(cart)
@@ -204,26 +204,55 @@ def crackers_add(message):
 def fish_add(message):
     item = message.text
     markup_inline = telebot.types.InlineKeyboardMarkup()
-    add_one = telebot.types.InlineKeyboardButton('+100гр', callback_data=f'+100 Рыбка {item}')
-    remove_one = telebot.types.InlineKeyboardButton('-100гр', callback_data=f'-100 Рыбка {item}')
-    cart = telebot.types.InlineKeyboardButton('🛒 Корзина', callback_data=f'shoppingCart')
-    markup_inline.add(remove_one, add_one)
-    markup_inline.add(cart)
+    if fish[item]["Фасовка"] == "Наразвес":
+        serving_option = "100гр"
+        add_gramms = telebot.types.InlineKeyboardButton('+100гр', callback_data=f'+100 Рыбка {item}')
+        remove_gramms = telebot.types.InlineKeyboardButton('-100гр', callback_data=f'-100 Рыбка {item}')
+        cart = telebot.types.InlineKeyboardButton('🛒 Корзина', callback_data=f'shoppingCart')
+        markup_inline.add(remove_gramms, add_gramms)
+        markup_inline.add(cart)
 
-    try:
-        pic = open(f"goods/riba/{item}.jpg", 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
-                                                    f'\n{fish[item]["Описание"]}'
-                                                    f'\nЦена: <i>{fish[item]["Цена"]}р</i>/<b>1шт</b>',
-                              reply_markup=markup_inline,
-                              parse_mode='html')
-    except FileNotFoundError:
-        pic = open(f'goods/riba/рыба.jpg', 'rb')
-        pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
-                                                    f'\n{fish[item]["Описание"]}'
-                                                    f'\nЦена: <i>{fish[item]["Цена"]}р</i>/<b>1шт</b>',
-                              reply_markup=markup_inline,
-                              parse_mode='html')
+        try:
+            pic = open(f"goods/riba/{item}.jpg", 'rb')
+            pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
+                                                        f'\n{fish[item]["Описание"]}'
+                                                        f'\nЦена: <i>{int(fish[item]["Цена"]/10)}р</i>/'
+                                                        f'<b>{serving_option}</b>',
+                                  reply_markup=markup_inline,
+                                  parse_mode='html')
+        except FileNotFoundError:
+            pic = open(f'goods/riba/рыба.jpg', 'rb')
+            pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
+                                                        f'\n{fish[item]["Описание"]}'
+                                                        f'\nЦена: <i>{int(fish[item]["Цена"]/10)}р</i>/'
+                                                        f'<b>{serving_option}</b>',
+                                  reply_markup=markup_inline,
+                                  parse_mode='html')
+    elif fish[item]["Фасовка"] == "Поштучно":
+        serving_option = "1шт"
+        if item == "Бычки":
+            serving_option = "10шт(фасованый)"
+        add_gramms = telebot.types.InlineKeyboardButton('+1шт', callback_data=f'+1 Рыбка {item}')
+        remove_gramms = telebot.types.InlineKeyboardButton('-1шт', callback_data=f'-1 Рыбка {item}')
+        cart = telebot.types.InlineKeyboardButton('🛒 Корзина', callback_data=f'shoppingCart')
+        markup_inline.add(remove_gramms, add_gramms)
+        markup_inline.add(cart)
+
+
+        try:
+            pic = open(f"goods/riba/{item}.jpg", 'rb')
+            pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
+                                                        f'\n{fish[item]["Описание"]}'
+                                                        f'\nЦена: <i>{fish[item]["Цена"]}р</i>/<b>{serving_option}</b>',
+                                  reply_markup=markup_inline,
+                                  parse_mode='html')
+        except FileNotFoundError:
+            pic = open(f'goods/riba/рыба.jpg', 'rb')
+            pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
+                                                        f'\n{fish[item]["Описание"]}'
+                                                        f'\nЦена: <i>{fish[item]["Цена"]}р</i>/<b>{serving_option}</b>',
+                                  reply_markup=markup_inline,
+                                  parse_mode='html')
 
 
 @pennij_bot.message_handler(func=lambda message: message.text in cheese)
@@ -258,7 +287,8 @@ def show_cart(callback):
         if cart[callback.message.chat.id]:
             pennij_bot.answer_callback_query(callback.id, f'Итого: деньги')
             pennij_bot.send_message(callback.message.chat.id,
-                                    f'Твоя корзина, {callback.from_user.first_name}: \n{cart}')
+                                    f'Твоя корзина, {callback.from_user.first_name}: '
+                                    f'\n{cart[callback.message.chat.id]}')
         else:
             pennij_bot.answer_callback_query(callback.id, f'Корзина пуста')
     else:
@@ -273,18 +303,16 @@ def purchase_callback(callback):
     if callback_request == "+1":
         option = 1
         item = " ".join(callback.data.split()[1:])
-        add_to_cart(callback, item, option)
-    elif callback_request == "+100":
-        option = 0.1
-        item = " ".join(callback.data.split()[1:])
-        add_to_cart(callback, item, option)
-        pennij_bot.answer_callback_query(callback.id, f'{item} в корзине: {cart[callback.message.chat.id][item]}')
+        serving_option = "шт"
+        add_to_cart(callback, item, option, serving_option)
+
     elif callback_request == "-1":
         if callback.message.chat.id in cart:
             option = 1
             item = " ".join(callback.data.split()[1:])
+            serving_option = "шт"
             try:
-                remove_from_cart(callback, item, option)
+                remove_from_cart(callback, item, option, serving_option)
                 pennij_bot.answer_callback_query(callback.id,
                                                  f'{item} удален из корзины: {cart[callback.message.chat.id][item]}')
             except KeyError:
@@ -292,12 +320,62 @@ def purchase_callback(callback):
                                                  f'{item} отсутствует в корзине')
         else:
             pennij_bot.answer_callback_query(callback.id, f'Корзина пуста')
+
+    if callback_request == "+1.0":
+        option = 1.0
+        item = " ".join(callback.data.split()[1:])
+        serving_option = "л"
+        add_to_cart(callback, item, option, serving_option)
+
+    elif callback_request == "-1.0":
+        if callback.message.chat.id in cart:
+            option = 1.0
+            item = " ".join(callback.data.split()[1:])
+            serving_option = "л"
+            try:
+                remove_from_cart(callback, item, option, serving_option)
+                pennij_bot.answer_callback_query(callback.id,
+                                                 f'{item} удален из корзины: {cart[callback.message.chat.id][item]}')
+            except KeyError:
+                pennij_bot.answer_callback_query(callback.id,
+                                                 f'{item} отсутствует в корзине')
+        else:
+            pennij_bot.answer_callback_query(callback.id, f'Корзина пуста')
+
+    elif callback_request == "+1.5":
+        option = 1.5
+        item = " ".join(callback.data.split()[1:])
+        serving_option = "л"
+        add_to_cart(callback, item, option, serving_option)
+
+    elif callback_request == "-1.5":
+        if callback.message.chat.id in cart:
+            option = 1.5
+            item = " ".join(callback.data.split()[1:])
+            serving_option = "л"
+            try:
+                remove_from_cart(callback, item, option, serving_option)
+                pennij_bot.answer_callback_query(callback.id,
+                                                 f'{item} удален из корзины: {cart[callback.message.chat.id][item]}')
+            except KeyError:
+                pennij_bot.answer_callback_query(callback.id,
+                                                 f'{item} отсутствует в корзине')
+        else:
+            pennij_bot.answer_callback_query(callback.id, f'Корзина пуста')
+
+    elif callback_request == "+100":
+        option = 0.1
+        item = " ".join(callback.data.split()[1:])
+        serving_option = "гр"
+        add_to_cart(callback, item, option, serving_option)
+
     elif callback_request == "-100":
         if callback.message.chat.id in cart:
             option = 0.1
             item = " ".join(callback.data.split()[1:])
+            serving_option = "гр"
             try:
-                remove_from_cart(callback, item, option)
+                remove_from_cart(callback, item, option, serving_option)
                 pennij_bot.answer_callback_query(callback.id,
                                                  f'{item} удален из корзины: {cart[callback.message.chat.id][item]}')
             except KeyError:
@@ -307,30 +385,51 @@ def purchase_callback(callback):
             pennij_bot.answer_callback_query(callback.id, f'Корзина пуста')
 
 
-def add_to_cart(callback, item, option):
+def add_to_cart(callback, item, option, serving_option):
     if callback.message.chat.id not in cart:
         cart.update({callback.message.chat.id: {}})
         cart[callback.message.chat.id][item] = round(cart[callback.message.chat.id].get(item, 0) + option, 1)
         print(cart, item)
-        pennij_bot.answer_callback_query(callback.id, f'{item} в корзине: {cart[callback.message.chat.id][item]}')
+        if serving_option != "гр":
+            pennij_bot.answer_callback_query(callback.id,
+                                             f'{item} в корзине: {cart[callback.message.chat.id][item]}'
+                                             f'{serving_option}')
+        else:
+            pennij_bot.answer_callback_query(callback.id,
+                                             f'{item} в корзине: {int(cart[callback.message.chat.id][item] * 1000)}'
+                                             f'{serving_option}')
     else:
         cart[callback.message.chat.id][item] = round(cart[callback.message.chat.id].get(item, 0) + option, 1)
         print(cart, item)
-        pennij_bot.answer_callback_query(callback.id, f'{item} в корзине: {cart[callback.message.chat.id][item]}')
+        if serving_option != "гр":
+            pennij_bot.answer_callback_query(callback.id,
+                                             f'{item} в корзине: {cart[callback.message.chat.id][item]}'
+                                             f'{serving_option}')
+        else:
+            pennij_bot.answer_callback_query(callback.id,
+                                             f'{item} в корзине: {int(cart[callback.message.chat.id][item] * 1000)}'
+                                             f'{serving_option}')
         print(cart)
 
 
-def remove_from_cart(callback, item, option):
+def remove_from_cart(callback, item, option, serving_option):
     try:
-        cart[callback.message.chat.id].get(item)
-        if cart[callback.message.chat.id].get(item, 0) == 1 or cart[callback.message.chat.id].get(item, 0) == 0.1:
+        rqst = cart[callback.message.chat.id].get(item)
+        if rqst - option <= 0:
+            del cart[callback.message.chat.id][item]
             pennij_bot.answer_callback_query(callback.id, f'{item} - удалено из корзины')
             print(cart, item)
-            del cart[callback.message.chat.id][item]
         else:
             cart[callback.message.chat.id][item] = round(cart[callback.message.chat.id].get(item) - option, 1)
-            pennij_bot.answer_callback_query(callback.id,
-                                             f'{item} убрано из корзины: {cart[callback.message.chat.id][item]}')
+            if serving_option != "гр":
+                pennij_bot.answer_callback_query(callback.id,
+                                                 f'{item} остаток в корзине: '
+                                                 f'{cart[callback.message.chat.id][item]}{serving_option}')
+            else:
+                pennij_bot.answer_callback_query(callback.id,
+                                                 f'{item} остаток в корзине: '
+                                                 f'{int(cart[callback.message.chat.id][item] * 1000)}'
+                                                 f'{serving_option}')
         print(cart)
     except TypeError:
         pennij_bot.answer_callback_query(callback.id,
@@ -533,8 +632,9 @@ def cartChapter(message):
     btn3 = types.KeyboardButton("↩️ Назад к ассортименту")
     markup.row(btn1)
     markup.row(btn2, btn3)
-
-    pennij_bot.send_message(message.chat.id, f'Твоя корзина, {message.from_user.first_name}:\n{cart}',
+    stash = stashCheck(cart[message.chat.id])
+    pennij_bot.send_message(message.chat.id, f'Твоя корзина, {message.from_user.first_name}:'
+                                             f'\n{stash}',
                             reply_markup=markup)
 
 
@@ -592,6 +692,12 @@ def smartBottles(liters, price):
     # Если литров 0
     else:
         return 'Литров не может быть 0'
+
+
+def stashCheck(query):
+    """ПИВО СИДР СЫР СУХАРИКИ ЗАКУСКА РЫБКА"""
+    for key, value in query.items():
+        print(key, value)
 
 
 def go_infinity():
