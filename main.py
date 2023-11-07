@@ -1,11 +1,11 @@
 import datetime
-
+import sqlite3
 from telebot import types
 import telebot
 import time
 import os
 import random
-from config import BOT_TOKEN, URL, ANSWERS, ADMIN_ID, ANNOUNCEMENT, SAY
+from config import BOT_TOKEN, URL, ANSWERS, ADMIN_ID, ANNOUNCEMENT, SAY, DELIVERY, INTRODUCE
 from assortiment import beer, cidre, crackers, knuts, fish, cheese, all_goods
 from nick_names import NICK
 
@@ -28,22 +28,52 @@ chooseНУЖНЫЙ_ТОВАР так, что бы у кнопки было та�
 Прописать сколько грамм рыбы пробивать через кассу что бы било чек
 
 Нужно добавить:
-Адекватное отображение корзины
-Обновление корзины
-Подсчет итоговой суммы корзины
-Очистку корзины
+Адекватное отображение корзины +
+Обновление корзины +
+Подсчет итоговой суммы корзины +
+Очистку корзины +
+Редактирование корзины
+
+Фотки и описание для всех айтемов
+
+Добавление id нового пользователя в бд
+
 Оформление заказа
+Запрос контакта
+Запрос комментария к заказу
+Запрос адреса
+
 Добавление заказа в текстовый документ
 Отправка заказа админам в ТГ
-Отправка заказа на почту
-Запрос контакта
-Запрос коммантария к заказу
-Запрос адреса
+Отправка заказа на рабочую почту
+Удаление корзины пользователя после отправки заказа
+
+Загрузить бота на сервер
+
+Работа бота в рабочее время (с 10 до 9)
 """
 
 pennij_bot = telebot.TeleBot(BOT_TOKEN)
 
 cart = {}
+
+# cart = {
+#     1626668178: {'Пиво Вайсберг': 4.0,
+#                  'Пиво Гагарин': 2.5,
+#                  'Рыбка Тарань': 2,
+#                  'Закуска Палочки из щуки': 1,
+#                  'Сидр Глинтвейн': 2.5,
+#                  'Рыбка Лещ': 3,
+#                  'Рыбка Горбуша (копченая)': 0.4,
+#                  'Пиво Штормовое': 2.5,
+#                  'Пиво Домашнее': 1.5,
+#                  'Сидр Ламбрусско': 1.5,
+#                  'Сухарики Деревенские': 0.2,
+#                  'Сухарики Аджика': 0.1,
+#                  'Сыр Косичка': 1,
+#                  'Рыбка Корюшка': 0.1,
+#                  'Рыбка Густера': 1,
+#                  'Рыбка Бычки': 1}}
 
 DIR = "memes"
 
@@ -52,6 +82,28 @@ DIR = "memes"
 
 @pennij_bot.message_handler(commands=["start"])
 def welcome(message):
+    connect = sqlite3.connect('shop.db')
+    cursor = connect.cursor()
+
+    cursor.execute("""CREATE TABLE IF NOT EXISTS login_id(
+    chat_id INTEGER,
+    user_name TEXT,
+    user_id INTEGER);
+    """)
+
+    connect.commit()
+
+    chat_id = message.chat.id
+    user_name = message.from_user.first_name
+    user_id = message.from_user.id
+    cursor.execute(f"SELECT chat_id FROM login_id WHERE chat_id = {chat_id}")
+    data = cursor.fetchone()
+    if data is None:
+        cursor.execute("INSERT INTO login_id VALUES(?,?,?);", (chat_id,
+                                                               user_name,
+                                                               user_id))
+        connect.commit()
+
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton('🍻 Ассортимент 🐟')
     btn2 = types.KeyboardButton('🛟 Помощь')
@@ -302,10 +354,8 @@ def cheese_add(message):
 def show_cart_callback(callback):
     if callback.message.chat.id in cart:
         if cart[callback.message.chat.id]:
-            pennij_bot.answer_callback_query(callback.id, f'Итого: деньги')
-            pennij_bot.send_message(callback.message.chat.id,
-                                    f'Твоя корзина, {callback.from_user.first_name}: '
-                                    f'\n{cart[callback.message.chat.id]}')
+            total_ammount = cartChapter(callback=callback)
+            pennij_bot.answer_callback_query(callback.id, f'Итого: {total_ammount}р')
         else:
             pennij_bot.answer_callback_query(callback.id, f'Корзина пуста')
     else:
@@ -316,30 +366,90 @@ def show_cart_button(message):
     cartID = message.chat.id
     if cartID in cart:
         if cart[cartID]:
-            cartChapter(message)
+            cartChapter(message=message)
         else:
             pennij_bot.send_message(message.chat.id, f"Корзина пуста")
     else:
         pennij_bot.send_message(message.chat.id, f"Корзина пуста")
 
 
-def cartChapter(message):
+def cartChapter(message=None, callback=None):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton("✅ Оформить заказ")
     btn2 = types.KeyboardButton("✍️ Редактировать корзину")
     btn3 = types.KeyboardButton("↩️ Назад к ассортименту")
     markup.row(btn1)
     markup.row(btn2, btn3)
-    # stash = stashCheck(cart[message.chat.id])
-    pennij_bot.send_message(message.chat.id, f'Твоя корзина, {message.from_user.first_name}:'
-                                             f'\n{cart[message.chat.id]}',
-                            reply_markup=markup)
+
+    if message:
+        stash, total_ammount = stashCheck(cart[message.chat.id])
+        pennij_bot.send_message(message.chat.id, f'Твоя корзина, {message.from_user.first_name}:'
+                                                 f'\n{stash}', reply_markup=markup)
+    elif callback:
+        stash, total_ammount = stashCheck(cart[callback.message.chat.id])
+        pennij_bot.send_message(callback.message.chat.id, f'Твоя корзина, {callback.from_user.first_name}:'
+                                                          f'\n{stash}', reply_markup=markup)
+
+    return total_ammount
 
 
 def stashCheck(query):
-    """ПИВО СИДР СЫР СУХАРИКИ ЗАКУСКА РЫБКА"""
-    for key, value in query.items():
-        print(key, value)
+    """ПИВО СИДР СЫР СУХАРИКИ ЗАКУСКА РЫБКА БЕЗАЛКОГОЛЬНОЕ"""
+    print(query)
+    sorted_query = dict(sorted(query.items(), key=lambda x: x[0]))
+    check = f'{"~" * 25}\n'
+    total_ammount = 0 + DELIVERY
+    check_id = 0
+    for key, value in sorted_query.items():
+        # print(f'{key}, {value}')
+        item_type, item_name = key.split(maxsplit=1)
+        print(item_name)
+        if item_type == "Пиво":
+            check_id += 1
+            ammount = int(beer[item_name]['Цена'] * value)
+            check += f'{check_id}) {item_type} "{item_name}" {value}л: {ammount}р\n'
+            total_ammount += ammount
+
+        elif item_type == "Сидр":
+            check_id += 1
+            ammount = int(cidre[item_name]['Цена'] * value)
+            check += f'{check_id}) {item_type} "{item_name}" {value}л: {ammount}р\n'
+            total_ammount += ammount
+        elif item_type == "Безалкогольное":
+            pass
+        elif item_type == "Сухарики":
+            check_id += 1
+            ammount = int(crackers[item_name]['Цена'] * value)
+            check += f'{check_id}) {item_type} "{item_name}" {int(value*1000)}гр: {ammount}р\n'
+            total_ammount += ammount
+        elif item_type == "Закуска":
+            check_id += 1
+            ammount = int(knuts[item_name]['Цена'] * value)
+            check += f'{check_id}) {item_type} "{item_name}" {value}шт: {ammount}р\n'
+            total_ammount += ammount
+        elif item_type == "Рыбка":
+            check_id += 1
+            if fish[item_name]['Фасовка'] == "Наразвес":
+                print(f"{item_name} - наразвес")
+                ammount = int(fish[item_name]['Цена'] * value)
+                check += f'{check_id}) {item_type} "{item_name}" {int(value*1000)}гр: {ammount}р\n'
+                total_ammount += ammount
+            elif fish[item_name]['Фасовка'] == "Поштучно":
+                print(f"{item_name} - наразвес")
+                ammount = int(fish[item_name]['Цена'] * value)
+                check += f'{check_id}) {item_type} "{item_name}" {value}шт: {ammount}р\n'
+                total_ammount += ammount
+        elif item_type == "Сыр":
+            check_id += 1
+            ammount = int(cheese[item_name]['Цена'] * value)
+            check += f'{check_id}) {item_type} "{item_name}" {value}шт: {ammount}р\n'
+            total_ammount += ammount
+
+    check += f'{"~"*25}\n' \
+             f'Доставка: {DELIVERY}р\n' \
+             f'Итого: {total_ammount}р'
+
+    return [check, total_ammount]
 
 
 @pennij_bot.callback_query_handler(func=lambda callback: True)
@@ -535,7 +645,7 @@ def user_messages(message):
     elif message.text == '↩️ Назад к ассортименту':
         goodsChapter(message)
     elif message.text == '↩️ Назад в меню':
-        welcome(message)
+        main_page(message)
     elif message.text == '↩️ Назад к пиву':
         chooseBeer(message)
     elif message.text == '↩️ Назад к сидрам':
@@ -673,11 +783,28 @@ def goodsChapter(message):
     markup.row(btn1, btn2)
     markup.row(btn3, btn5)
     markup.row(btn7, btn4, btn6)
+    intro = random.choice(INTRODUCE)
+
+    pennij_bot.send_message(message.chat.id, f'{intro}', reply_markup=markup)
 
     if ANNOUNCEMENT:
-        announcment(message, SAY)
+        announcment(message, SAY, percent=20)
 
-    pennij_bot.send_message(message.chat.id, 'Всего лишь лучшее пиво в городе😉', reply_markup=markup)
+
+def main_page(message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    btn1 = types.KeyboardButton('🍻 Ассортимент 🐟')
+    btn2 = types.KeyboardButton('🛟 Помощь')
+    btn3 = types.KeyboardButton('📄 Контакты')
+    markup.row(btn1)
+    markup.row(btn2, btn3)
+
+    pennij_bot.send_message(message.chat.id,
+                            f"Уверен тебе здесь нравится, <b>{message.from_user.first_name}</b>! "
+                            f"Очень очень скоро тут можно будет заказать пиво и рыбку ;)"
+                            f"\nА пока можно посмотреть ассортимент и заказать по телефону из контактов",
+                            parse_mode='html', reply_markup=markup)
+    announcment(message=message, say=SAY)
 
 
 def smartBottles(liters, price):
@@ -716,10 +843,18 @@ def smartBottles(liters, price):
         return 'Литров не может быть 0'
 
 
-def announcment(message, say):
-    tell = random.choice(say)
-    pennij_bot.send_message(message.chat.id, f'{tell}', parse_mode='html')
-    print(f'Огласил "{tell}" для {message.from_user.first_name}')
+def announcment(message, say, percent=None):
+    if percent:
+        random_number = random.randint(0, 100)
+        if random_number <= percent:
+            print(random_number, percent)
+            tell = random.choice(say)
+            pennij_bot.send_message(message.chat.id, f'{tell}', parse_mode='html')
+            print(f'Огласил "{tell}" для {message.from_user.first_name}')
+    else:
+        tell = random.choice(say)
+        pennij_bot.send_message(message.chat.id, f'{tell}', parse_mode='html')
+        print(f'Огласил "{tell}" для {message.from_user.first_name}')
 
 
 def go_infinity():
