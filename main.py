@@ -12,73 +12,53 @@ from nick_names import NICK
 """
 Что бы бот заработал - следует создать файл config.py в корневой папке проекта и задать там переменную BOT_TOKEN
 содержащую токен Вашего бота. Так же можно создать переменную URL в которой указывается нужный Вам сайт.
+В переменной ANNOUNCEMENT можно включать и отключать извещения.
+
+Что бы добавить или изменить кнопку надо доавить ее в нужный раздел словаря в assortiment.py, а затем изменить функцию 
+chooseНУЖНЫЙ_ТОВАР так, что бы у кнопки было такое же название что и у в словаре. Так же рекомендуется загрузить фотку
+по разделу. Название фотки должно соответствовать названию кнопки
 
 Команды для бота:
 start - Вернуться к началу
 help - Увидеть все команды
 site - Перейти на сайт
 
-Полезные emojis:
-🧺🛒📲🧿🎉📖
-
-Чтобы добавить или изменить кнопку надо доавить ее в нужный раздел словаря в assortiment.py, а затем изменить функцию 
-chooseНУЖНЫЙ_ТОВАР так, что бы у кнопки было такое же название что и у в словаре. Так же рекомендуется загрузить фотку
-по разделу. Название фотки должно соответствовать названию кнопки
-
+ИРЛ:
 Прописать сколько грамм рыбы пробивать через кассу что бы било чек
 
+
+
+
+
 Нужно добавить:
-Адекватное отображение корзины +
-Обновление корзины +
-Подсчет итоговой суммы корзины +
-Очистку корзины +
-Редактирование корзины
+Рассылку новых предложений пользователям - через кнопку настройки которая будет отображаться только у админов. 
+Нужно будет отправить фотку для рассылки, сообщение для рассылки посмотреть как это будет выглядеть и разослать
+всем пользователям из таблицы login_id
 
 Фотки и описание для всех айтемов
 
-Добавление id нового пользователя в бд
-
-Оформление заказа
-Запрос контакта
-Запрос комментария к заказу
-Запрос адреса
-
 Добавление заказа в текстовый документ
+
 Отправка заказа админам в ТГ
 Отправка заказа на рабочую почту
-Удаление корзины пользователя после отправки заказа
+
 
 Загрузить бота на сервер
 
 Работа бота в рабочее время (с 10 до 9)
+
+расчет суммы пива и сидров вместе с тарой
+
+Сохранение телефона пользователя, его фамилии и ника в бд(таблица login_id)
+
 """
 
 pennij_bot = telebot.TeleBot(BOT_TOKEN)
 
 cart = {}
 
-# cart = {
-#     1626668178: {'Пиво Вайсберг': 4.0,
-#                  'Пиво Гагарин': 2.5,
-#                  'Рыбка Тарань': 2,
-#                  'Закуска Палочки из щуки': 1,
-#                  'Сидр Глинтвейн': 2.5,
-#                  'Рыбка Лещ': 3,
-#                  'Рыбка Горбуша (копченая)': 0.4,
-#                  'Пиво Штормовое': 2.5,
-#                  'Пиво Домашнее': 1.5,
-#                  'Сидр Ламбрусско': 1.5,
-#                  'Сухарики Деревенские': 0.2,
-#                  'Сухарики Аджика': 0.1,
-#                  'Сыр Косичка': 1,
-#                  'Рыбка Корюшка': 0.1,
-#                  'Рыбка Густера': 1,
-#                  'Рыбка Бычки': 1}}
-
 DIR = "memes"
 
-
-# Если нужно сделать объявление(о какой либо новинке или акции или или) достаточно написать в announcment нужный текст
 
 @pennij_bot.message_handler(commands=["start"])
 def welcome(message):
@@ -113,8 +93,8 @@ def welcome(message):
 
     pennij_bot.send_message(message.chat.id,
                             f"Привет, <b>{message.from_user.first_name}</b>! "
-                            f"Скоро тут можно будет заказать пиво и рыбку ;)"
-                            f"\nА пока можно посмотреть ассортимент и заказать по телефону",
+                            f"Ты можешь заказать пиво и рыбку через приложение или по телефону;)"
+                            f"\nНомер телефона для связи находится в разделе: 📄 Контакты",
                             parse_mode='html', reply_markup=markup)
 
 
@@ -145,6 +125,53 @@ def get_help(message):
                             "<b>Вернуться в начало</b>: <u>/start</u> "
                             "\n<b>По вопросам неисправностей или сотрудничества:</b> <u>@repredess</u>",
                             parse_mode='html')
+
+
+def placing_an_order(message):
+    markup = telebot.types.InlineKeyboardMarkup()
+    markup.add(telebot.types.InlineKeyboardButton('Да', callback_data='confirm_order'),
+               telebot.types.InlineKeyboardButton('Нет', callback_data='cancel_order'))
+
+    pennij_bot.send_message(message.chat.id,
+                            'Вы уверены что хотите оформить заказ?', reply_markup=markup)
+
+
+@pennij_bot.callback_query_handler(func=lambda callback: callback.data == 'confirm_order')
+def confirm_order_handler(callback):
+    if callback.message.chat.id in cart:
+        markup = telebot.types.ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
+        btn1 = telebot.types.KeyboardButton('Оставить контакт', request_contact=True)
+        btn2 = telebot.types.KeyboardButton('↩️ Назад в меню')
+        markup.add(btn1, btn2)
+
+        pennij_bot.answer_callback_query(callback.id, 'Подтверждение заказа')
+        pennij_bot.send_message(callback.message.chat.id,
+                                'Нажмите кнопку "Оставить контакт" что бы мы могли с тобой связаться',
+                                reply_markup=markup)
+    else:
+        pennij_bot.answer_callback_query(callback.id, 'Корзина пуста')
+
+
+@pennij_bot.callback_query_handler(func=lambda callback: callback.data == 'cancel_order')
+def cancel_order_handler(callback):
+    pennij_bot.answer_callback_query(callback.id, 'Заказ отменен')
+    goodsChapter(callback.message)
+
+
+@pennij_bot.message_handler(content_types=['contact'])
+def handle_contact(message):
+    try:
+        order, money = stashCheck(cart[message.chat.id])
+        pennij_bot.send_message(ADMIN_ID, f"Заказ для {message.from_user.first_name} оформлен: {order}\n"
+                                          f"Номер для связи: {message.contact.phone_number}")
+        pennij_bot.send_message(message.chat.id, f'Спасибо за заказ, {message.from_user.first_name}.',
+                                parse_mode='html')
+        del cart[message.chat.id]
+        main_page(message, order=True)
+    except KeyError:
+        pennij_bot.send_message(message.chat.id, f'Упс, кажется с нашим сервером что то случилось.\n'
+                                                 f'Попробуйте заполнить корзину еще раз.')
+        main_page(message)
 
 
 @pennij_bot.message_handler(func=lambda message: message.text in beer)
@@ -376,10 +403,8 @@ def show_cart_button(message):
 def cartChapter(message=None, callback=None):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton("✅ Оформить заказ")
-    btn2 = types.KeyboardButton("✍️ Редактировать корзину")
-    btn3 = types.KeyboardButton("↩️ Назад к ассортименту")
-    markup.row(btn1)
-    markup.row(btn2, btn3)
+    btn2 = types.KeyboardButton("↩️ Назад к ассортименту")
+    markup.row(btn1, btn2)
 
     if message:
         stash, total_ammount = stashCheck(cart[message.chat.id])
@@ -420,7 +445,7 @@ def stashCheck(query):
         elif item_type == "Сухарики":
             check_id += 1
             ammount = int(crackers[item_name]['Цена'] * value)
-            check += f'{check_id}) {item_type} "{item_name}" {int(value*1000)}гр: {ammount}р\n'
+            check += f'{check_id}) {item_type} "{item_name}" {int(value * 1000)}гр: {ammount}р\n'
             total_ammount += ammount
         elif item_type == "Закуска":
             check_id += 1
@@ -432,7 +457,7 @@ def stashCheck(query):
             if fish[item_name]['Фасовка'] == "Наразвес":
                 print(f"{item_name} - наразвес")
                 ammount = int(fish[item_name]['Цена'] * value)
-                check += f'{check_id}) {item_type} "{item_name}" {int(value*1000)}гр: {ammount}р\n'
+                check += f'{check_id}) {item_type} "{item_name}" {int(value * 1000)}гр: {ammount}р\n'
                 total_ammount += ammount
             elif fish[item_name]['Фасовка'] == "Поштучно":
                 print(f"{item_name} - наразвес")
@@ -445,7 +470,7 @@ def stashCheck(query):
             check += f'{check_id}) {item_type} "{item_name}" {value}шт: {ammount}р\n'
             total_ammount += ammount
 
-    check += f'{"~"*25}\n' \
+    check += f'{"~" * 25}\n' \
              f'Доставка: {DELIVERY}р\n' \
              f'Итого: {total_ammount}р'
 
@@ -546,7 +571,7 @@ def add_to_cart(callback, item, option, serving_option):
     if callback.message.chat.id not in cart:
         cart.update({callback.message.chat.id: {}})
         cart[callback.message.chat.id][item] = round(cart[callback.message.chat.id].get(item, 0) + option, 1)
-        print(cart, item)
+        print(f'{item} for {callback.from_user.first_name}')
         if serving_option != "гр":
             pennij_bot.answer_callback_query(callback.id,
                                              f'{item} в корзине: {cart[callback.message.chat.id][item]}'
@@ -557,7 +582,7 @@ def add_to_cart(callback, item, option, serving_option):
                                              f'{serving_option}')
     else:
         cart[callback.message.chat.id][item] = round(cart[callback.message.chat.id].get(item, 0) + option, 1)
-        print(cart, item)
+        print(f'{item} for {callback.from_user.first_name}')
         if serving_option != "гр":
             pennij_bot.answer_callback_query(callback.id,
                                              f'{item} в корзине: {cart[callback.message.chat.id][item]}'
@@ -572,10 +597,10 @@ def add_to_cart(callback, item, option, serving_option):
 def remove_from_cart(callback, item, option, serving_option):
     try:
         rqst = cart[callback.message.chat.id].get(item)
+        print(f'{item} for {callback.from_user.first_name}')
         if rqst - option <= 0:
             del cart[callback.message.chat.id][item]
             pennij_bot.answer_callback_query(callback.id, f'{item} - удалено из корзины')
-            print(cart, item)
         else:
             cart[callback.message.chat.id][item] = round(cart[callback.message.chat.id].get(item) - option, 1)
             if serving_option != "гр":
@@ -609,6 +634,9 @@ def user_messages(message):
                                 parse_mode='html')
     elif message.text == '🛒 Корзина':
         show_cart_button(message)
+
+    elif message.text == '✅ Оформить заказ':
+        placing_an_order(message)
 
     # Кнопка "ПИВО"
     elif message.text == 'Пиво':
@@ -663,15 +691,17 @@ def user_messages(message):
                             parse_mode='html')
 
 
-def send_to_admin(message):
+def send_to_admin(message, in_app=False):
     id = message.from_user.id
     print(message)
     if id == ADMIN_ID:
         print(f"Admin is HEREEE🫡. Name {message.from_user.first_name}")
-        pennij_bot.send_message(ADMIN_ID, "Its Admin's ID")
+        # pennij_bot.send_message(ADMIN_ID, "Its Admin's ID")
     elif id != ADMIN_ID:
+        if in_app:
+            pennij_bot.send_message(ADMIN_ID, f'Somebody come to find for some beer. His name/ID ='
+                                              f' {message.from_user.first_name}{id}')
         print(f'Somebody wanna find some. His ID = {id}. Name {message.from_user.first_name}')
-        pennij_bot.send_message(ADMIN_ID, f'Somebody come to find for some beer. His ID = {id}')
 
 
 def chooseSticks(message):
@@ -771,7 +801,7 @@ def chooseBeer(message):
     pennij_bot.send_message(message.chat.id, 'Пиво на любой вкус😉 \nВыбирай любое:', reply_markup=markup)
 
 
-def goodsChapter(message):
+def goodsChapter(message, talk=True):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton("Пиво")
     btn2 = types.KeyboardButton("Сидры")
@@ -785,13 +815,14 @@ def goodsChapter(message):
     markup.row(btn7, btn4, btn6)
     intro = random.choice(INTRODUCE)
 
-    pennij_bot.send_message(message.chat.id, f'{intro}', reply_markup=markup)
+    if talk:
+        pennij_bot.send_message(message.chat.id, f'{intro}', reply_markup=markup)
 
-    if ANNOUNCEMENT:
-        announcment(message, SAY, percent=20)
+        if ANNOUNCEMENT:
+            announcment(message, SAY, percent=20)
 
 
-def main_page(message):
+def main_page(message, order=False):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton('🍻 Ассортимент 🐟')
     btn2 = types.KeyboardButton('🛟 Помощь')
@@ -799,12 +830,18 @@ def main_page(message):
     markup.row(btn1)
     markup.row(btn2, btn3)
 
-    pennij_bot.send_message(message.chat.id,
-                            f"Уверен тебе здесь нравится, <b>{message.from_user.first_name}</b>! "
-                            f"Очень очень скоро тут можно будет заказать пиво и рыбку ;)"
-                            f"\nА пока можно посмотреть ассортимент и заказать по телефону из контактов",
-                            parse_mode='html', reply_markup=markup)
-    announcment(message=message, say=SAY)
+    if not order:
+        pennij_bot.send_message(message.chat.id,
+                                f"Уверен тебе здесь нравится, <b>{message.from_user.first_name}</b>! "
+                                f"Ты можешь заказать пиво и рыбку через приложение или по телефону;)"
+                                f"\nНомер телефона для связи находится в разделе контакы",
+                                parse_mode='html', reply_markup=markup)
+        announcment(message=message, say=SAY)
+    else:
+        pennij_bot.send_message(message.chat.id,
+                                f"Скоро тебе презвонят что бы уточнить детали. Будь на связи😉",
+                                parse_mode='html', reply_markup=markup)
+        announcment(message=message, say=SAY)
 
 
 def smartBottles(liters, price):
