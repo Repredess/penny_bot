@@ -63,8 +63,8 @@ cidre = {"Голубая лагуна": {"Цена": 127,
                      "Описание": "Сидр",
                      "Алкоголь": "5.5%"},
          "Ламбрусско": {"Цена": 127,
-                     "Описание": "Сидр",
-                     "Алкоголь": "5.5%"},
+                        "Описание": "Сидр",
+                        "Алкоголь": "5.5%"},
          "Сицилийский апельсин": {"Цена": 127,
                                   "Описание": "Сидр",
                                   "Алкоголь": "5.5%"},
@@ -135,6 +135,60 @@ fish = {
 cheese = {
     "Косичка": {"Цена": 200,
                 "Описание": ""},
+    "Адыгейский": {"Цена": 200,
+                   "Описание": ""}
+}
+
+lemonade = {
+    "Клубничный": {"Цена": 85,
+                   "Описание": "Клубничный лимонад",
+                   "Подробнее": "https://bochkari.ru/brand-portfolio/beverages/domashniy-limonad-klubnika/"},
+    "Мохито": {"Цена": 85,
+               "Описание": "Лимонад Мохито",
+               "Подробнее": "https://bochkari.ru/brand-portfolio/beverages/mokhito-laym-myata/"},
+    "Имбирный": {"Цена": 85,
+                 "Описание": "Имбирный лимонад",
+                 "Подробнее": "https://bochkari.ru/brand-portfolio/beverages/domashniy-limonad-ginger/"},
+    "Лимонный": {"Цена": 85,
+                 "Описание": "Домашний лемонад со вкусом лимона",
+                 "Подробнее": "https://bochkari.ru/brand-portfolio/beverages/domashniy-limonad/"},
+    "Классический": {"Цена": 85,
+                     "Описание": "Классический лимонад",
+                     "Подробнее": "https://bochkari.ru/brand-portfolio/beverages/limonad-bochkari/"}
+}
+
+energize = {
+    "TARGET ZERO": {"Цена": 95,
+                    "Описание": "Без сахара",
+                    "Подробнее": "https://bochkari.ru/brand-portfolio/energy/energy-target-zero/"},
+    "TARGET ACTIVE": {"Цена": 95,
+                      "Описание": "Энергетик",
+                      "Подробнее": "https://bochkari.ru/brand-portfolio/energy/energy-target-active/"},
+    "TARGET ORIGINAL": {"Цена": 95,
+                        "Описание": "Энергетик",
+                        "Подробнее": "https://bochkari.ru/brand-portfolio/energy/energy-target/"},
+    "TARGET MAXIMUM": {"Цена": 95,
+                       "Описание": "Энергетик",
+                       "Подробнее": "https://bochkari.ru/brand-portfolio/energy/energy-target-max/"},
+    "TARGET MANGO": {"Цена": 95,
+                     "Описание": "Энергетик",
+                     "Подробнее": "https://bochkari.ru/brand-portfolio/energy/energy-target-mango/"}
+
+}
+
+sodie_pop = {
+    "Cola Bochkari": {"Цена": 111,
+                      "Описание": "Сладкая вода 1.5л",
+                      "Подробнее": "https://bochkari.ru/brand-portfolio/beverages/cola_bochkari/"},
+    "CitrusHit Bochkari": {"Цена": 111,
+                           "Описание": "Сладкая вода 1.5л",
+                           "Подробнее": "https://bochkari.ru/brand-portfolio/beverages/citrusHit_bochkari/"},
+    "Orange Bochkari": {"Цена": 111,
+                        "Описание": "Сладкая вода 1.5л",
+                        "Подробнее": "https://bochkari.ru/brand-portfolio/beverages/orange_bochkari/"},
+    'Квас "Андреич"': {"Цена": 111,
+                       "Описание": "Квас 1.5л",
+                       "Подробнее": "https://bochkari.ru/brand-portfolio/kvass/kvas-andreich/"}
 }
 
 all_goods = {"Пиво": beer,
@@ -142,4 +196,8 @@ all_goods = {"Пиво": beer,
              "Сухарики": crackers,
              "Закуска": knuts,
              "Рыбка": fish,
-             "Сыр": cheese}
+             "Сыр": cheese,
+             "Лимонад": lemonade,
+             "Энергетик": energize,
+             "Содовая и квас": sodie_pop
+             }
