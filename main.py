@@ -28,10 +28,10 @@ site - Перейти на сайт
 Прописать сколько грамм рыбы пробивать через кассу что бы било чек
 
 
+Нужно добавить:
+
 Рассылка акций и новинок пользователям
 
-
-Нужно добавить:
 Рассылку новых предложений пользователям - через кнопку настройки которая будет отображаться только у админов. 
 Нужно будет отправить фотку для рассылки, сообщение для рассылки посмотреть как это будет выглядеть и разослать
 всем пользователям из таблицы login_id
@@ -44,10 +44,23 @@ site - Перейти на сайт
 
 Работа бота в рабочее время (с 10 до 9)
 
-расчет суммы пива и сидров вместе с тарой
-
 Сохранение телефона пользователя, его фамилии и ника в бд(таблица login_id)
 
+
+
+Приветствуем вас в онлайн баре — Svoi Delivery!
+Заказы принимаем до 17:00 по будням!
+Заказы оформленные в выходные — обрабатываются в понедельник.
+Как получить заказ:
+— заказ должен быть кратным 12 или 20 банкам/бутылкам (в заказе могут быть по 1 шт любой позиции);
+— отправка по Москве — 450 руб.;
+— по Москве за МКАД — от 500 руб. (точная стоимость будет рассчитана после оформления заказа);
+— в регионы рассчитывается отдельно (точная стоимость будет рассчитана после оформления заказа).
+
+Сроки:
+— заказ сделан до 14:30 — в тот же день;
+— заказ оформлен после 14:30 — на следующий день;
+— отправка в регионы зависит от удаленности точки доставки и возможностей ТК.
 """
 
 pennij_bot = telebot.TeleBot(BOT_TOKEN)
@@ -114,6 +127,7 @@ def commandOrder(message):
             placing_an_order(message)
     else:
         pennij_bot.send_message(message.chat.id, 'Корзина пуста')
+
 
 @pennij_bot.message_handler(commands=["generate"])
 def generateNickname(message):
@@ -182,7 +196,7 @@ def cancel_order_handler(callback):
 def handle_contact(message):
     try:
         order, money = stashCheck(cart[message.chat.id])
-        pennij_bot.send_message(ADMIN_ID, f"Заказ для {message.from_user.first_name} оформлен: {order}\n"
+        pennij_bot.send_message(ADMIN_ID, f"Заказ для {message.from_user.first_name} оформлен:\n{order}\n"
                                           f"Номер для связи: {message.contact.phone_number}", parse_mode='html')
         on_email = f"{order}\nНомер для связи: {message.contact.phone_number}\nID чата: {message.chat.id}"
         print(send_email(on_email, subject=f"Заказ для {message.from_user.first_name} оформлен\n"))
@@ -513,6 +527,7 @@ def show_cart_button(message):
 
 
 def stashCheck(query):
+    print(cart)
     sorted_query = dict(sorted(query.items(), key=lambda x: x[0]))
     check = f'{"~" * 25}\n'
     total_ammount = 0 + DELIVERY
@@ -592,9 +607,10 @@ def stashCheck(query):
                 total_ammount += ammount
 
     for key, value in bottles_query.items():
-        bottles_ammount += value * bottle_price
-        check_id += 1
-        check += f'{check_id}) {key}л X {value} = {value * bottle_price}р\n'
+        if value:
+            bottles_ammount += value * bottle_price
+            check_id += 1
+            check += f'{check_id}) {key}л X {value} = {value * bottle_price}р\n'
     total_ammount += bottles_ammount
 
     check += f'{"~" * 25}\n' \
