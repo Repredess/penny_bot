@@ -191,6 +191,8 @@ sodie_pop = {
                        "Подробнее": "https://bochkari.ru/brand-portfolio/kvass/kvas-andreich/"}
 }
 
+bottle_price = 15
+
 all_goods = {"Пиво": beer,
              "Сидр": cidre,
              "Сухарики": crackers,

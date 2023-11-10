@@ -1,12 +1,13 @@
 import datetime
 import sqlite3
+import smtplib
 from telebot import types
 import telebot
 import time
 import os
 import random
-from config import BOT_TOKEN, URL, ANSWERS, ADMIN_ID, ANNOUNCEMENT, SAY, DELIVERY, INTRODUCE
-from assortiment import beer, cidre, crackers, knuts, fish, cheese, lemonade, energize, sodie_pop, all_goods
+from config import BOT_TOKEN, URL, ANSWERS, ADMIN_ID, ANNOUNCEMENT, SAY, DELIVERY, INTRODUCE, SENDER, PASS
+from assortiment import beer, cidre, crackers, knuts, fish, cheese, lemonade, energize, sodie_pop, bottle_price
 from nick_names import NICK
 
 """
@@ -27,6 +28,8 @@ site - Перейти на сайт
 Прописать сколько грамм рыбы пробивать через кассу что бы било чек
 
 
+Рассылка акций и новинок пользователям
+
 
 Нужно добавить:
 Рассылку новых предложений пользователям - через кнопку настройки которая будет отображаться только у админов. 
@@ -35,9 +38,7 @@ site - Перейти на сайт
 
 Фотки и описание для всех айтемов
 
-Добавление заказа в текстовый документ
-
-Отправка заказа на рабочую почту
+Добавление заказа в базу данных user_id, name(first_name + nick + second_name), order, date, total
 
 Загрузить бота на сервер
 
@@ -50,6 +51,13 @@ site - Перейти на сайт
 """
 
 pennij_bot = telebot.TeleBot(BOT_TOKEN)
+
+# cart = {1626668178: {'Пиво Вайсберг': 5.5, 'Пиво Гагарин': 3.0, 'Пиво Стаут': 1.5, 'Пиво Регион 82': 1.5,
+#                      'Пиво Хорватское': 2.0, 'Пиво Штормовое': 2.5, 'Пиво Домашнее': 2.5, 'Пиво Чешское Элитное': 2.5,
+#                      'Пиво Моряк': 2.0, 'Сидр Голубая лагуна': 1.0, 'Сидр Манго-маракуйя': 3.0,
+#                      'Сухарики Тайский перец': 0.2, 'Сухарики Краб': 0.1, 'Закуска Палочки из тунца': 1,
+#                      'Закуска Мясные кнуты': 1, 'Лимонад Клубничный': 1, 'Лимонад Классический': 1,
+#                      'Энергетик TARGET ACTIVE': 1, 'Полторашка CitrusHit Bochkari': 1}}
 
 cart = {}
 
@@ -93,9 +101,19 @@ def welcome(message):
                             f"\nНомер телефона для связи находится в разделе: 📄 Контакты",
                             parse_mode='html', reply_markup=markup)
 
+
 @pennij_bot.message_handler(commands=["to_all"])
 def to_all(message):
     pass
+
+
+@pennij_bot.message_handler(commands=["zakaz"])
+def commandOrder(message):
+    if message.chat.id in cart:
+        if cart[message.chat.id]:
+            placing_an_order(message)
+    else:
+        pennij_bot.send_message(message.chat.id, 'Корзина пуста')
 
 @pennij_bot.message_handler(commands=["generate"])
 def generateNickname(message):
@@ -165,7 +183,9 @@ def handle_contact(message):
     try:
         order, money = stashCheck(cart[message.chat.id])
         pennij_bot.send_message(ADMIN_ID, f"Заказ для {message.from_user.first_name} оформлен: {order}\n"
-                                          f"Номер для связи: {message.contact.phone_number}")
+                                          f"Номер для связи: {message.contact.phone_number}", parse_mode='html')
+        on_email = f"{order}\nНомер для связи: {message.contact.phone_number}\nID чата: {message.chat.id}"
+        print(send_email(on_email, subject=f"Заказ для {message.from_user.first_name} оформлен\n"))
         pennij_bot.send_message(message.chat.id, f'Спасибо за заказ, {message.from_user.first_name}.',
                                 parse_mode='html')
         del cart[message.chat.id]
@@ -493,79 +513,93 @@ def show_cart_button(message):
 
 
 def stashCheck(query):
-    print(query)
     sorted_query = dict(sorted(query.items(), key=lambda x: x[0]))
     check = f'{"~" * 25}\n'
     total_ammount = 0 + DELIVERY
+    bottles_query = {'1.5': 0,
+                     '1': 0}
+    bottles_ammount = 0
     check_id = 0
     for key, value in sorted_query.items():
-        # print(f'{key}, {value}')
         item_type, item_name = key.split(maxsplit=1)
-        print(item_name)
+
         if item_type == "Пиво":
             check_id += 1
             ammount = int(beer[item_name]['Цена'] * value)
-            check += f'{check_id}) {item_type} "{item_name}" {value}л: {ammount}р\n'
+            check += f'{check_id}) {item_type} <b>"{item_name}"</b> {value}л: {ammount}р\n'
+            get_bottles = smartBottles(value)
+            for key, value in get_bottles.items():
+                bottles_query[key] += value
             total_ammount += ammount
 
         elif item_type == "Сидр":
             check_id += 1
             ammount = int(cidre[item_name]['Цена'] * value)
-            check += f'{check_id}) {item_type} "{item_name}" {value}л: {ammount}р\n'
+            check += f'{check_id}) {item_type} <b>"{item_name}"</b> {value}л: {ammount}р\n'
+            get_bottles = smartBottles(value)
+            for key, value in get_bottles.items():
+                bottles_query[key] += value
             total_ammount += ammount
 
         elif item_type == "Лимонад":
             check_id += 1
             ammount = int(lemonade[item_name]['Цена'] * value)
-            check += f'{check_id}) {item_type} "{item_name}" {value}шт: {ammount}р\n'
+            check += f'{check_id}) {item_type} <b>"{item_name}"</b> {value}шт: {ammount}р\n'
             total_ammount += ammount
 
         elif item_type == "Энергетик":
             check_id += 1
             ammount = int(energize[item_name]['Цена'] * value)
-            check += f'{check_id}) {item_type} "{item_name}" {value}шт: {ammount}р\n'
+            check += f'{check_id}) {item_type} <b>"{item_name}"</b> {value}шт: {ammount}р\n'
             total_ammount += ammount
 
         elif item_type == "Полторашка":
             check_id += 1
             ammount = int(sodie_pop[item_name]['Цена'] * value)
-            check += f'{check_id}) {item_type} "{item_name}" {value}шт: {ammount}р\n'
+            check += f'{check_id}) {item_type} <b>"{item_name}"</b> {value}шт: {ammount}р\n'
             total_ammount += ammount
 
         elif item_type == "Сухарики":
             check_id += 1
             ammount = int(crackers[item_name]['Цена'] * value)
-            check += f'{check_id}) {item_type} "{item_name}" {int(value * 1000)}гр: {ammount}р\n'
+            check += f'{check_id}) {item_type} <b>"{item_name}"</b> {int(value * 1000)}гр: {ammount}р\n'
             total_ammount += ammount
 
         elif item_type == "Закуска":
             check_id += 1
             ammount = int(knuts[item_name]['Цена'] * value)
-            check += f'{check_id}) {item_type} "{item_name}" {value}шт: {ammount}р\n'
+            check += f'{check_id}) {item_type} <b>"{item_name}"</b> {value}шт: {ammount}р\n'
+            total_ammount += ammount
+
+        elif item_type == "Сыр":
+            check_id += 1
+            ammount = int(cheese[item_name]['Цена'] * value)
+            check += f'{check_id}) {item_type} <b>"{item_name}"</b> {value}шт: {ammount}р\n'
             total_ammount += ammount
 
         elif item_type == "Рыбка":
             check_id += 1
             if fish[item_name]['Фасовка'] == "Наразвес":
                 ammount = int(fish[item_name]['Цена'] * value)
-                check += f'{check_id}) {item_type} "{item_name}" {int(value * 1000)}гр: {ammount}р\n'
+                check += f'{check_id}) {item_type} <b>"{item_name}"</b> {int(value * 1000)}гр: {ammount}р\n'
                 total_ammount += ammount
             elif fish[item_name]['Фасовка'] == "Поштучно":
                 ammount = int(fish[item_name]['Цена'] * value)
                 if item_name == "Бычки":
-                    check += f'{check_id}) {item_type} "{item_name}" {value}уп({value * 10}шт): {ammount}р\n'
+                    check += f'{check_id}) {item_type} <b>"{item_name}"</b> {value}уп({value * 10}шт): {ammount}р\n'
                 else:
-                    check += f'{check_id}) {item_type} "{item_name}" {value}шт: {ammount}р\n'
+                    check += f'{check_id}) {item_type} <b>"{item_name}"</b> {value}шт: {ammount}р\n'
                 total_ammount += ammount
 
-        elif item_type == "Сыр":
-            check_id += 1
-            ammount = int(cheese[item_name]['Цена'] * value)
-            check += f'{check_id}) {item_type} "{item_name}" {value}шт: {ammount}р\n'
-            total_ammount += ammount
+    for key, value in bottles_query.items():
+        bottles_ammount += value * bottle_price
+        check_id += 1
+        check += f'{check_id}) {key}л X {value} = {value * bottle_price}р\n'
+    total_ammount += bottles_ammount
 
     check += f'{"~" * 25}\n' \
              f'Доставка: {DELIVERY}р\n' \
+             f'Тара: {bottles_ammount}р\n' \
              f'Итого: {total_ammount}р'
 
     return [check, total_ammount]
@@ -665,7 +699,6 @@ def add_to_cart(callback, item, option, serving_option):
     if callback.message.chat.id not in cart:
         cart.update({callback.message.chat.id: {}})
         cart[callback.message.chat.id][item] = round(cart[callback.message.chat.id].get(item, 0) + option, 1)
-        print(f'{item} for {callback.from_user.first_name}')
         if serving_option != "гр":
             pennij_bot.answer_callback_query(callback.id,
                                              f'{item} в корзине: {cart[callback.message.chat.id][item]}'
@@ -676,7 +709,6 @@ def add_to_cart(callback, item, option, serving_option):
                                              f'{serving_option}')
     else:
         cart[callback.message.chat.id][item] = round(cart[callback.message.chat.id].get(item, 0) + option, 1)
-        print(f'{item} for {callback.from_user.first_name}')
         if serving_option != "гр":
             pennij_bot.answer_callback_query(callback.id,
                                              f'{item} в корзине: {cart[callback.message.chat.id][item]}'
@@ -685,14 +717,13 @@ def add_to_cart(callback, item, option, serving_option):
             pennij_bot.answer_callback_query(callback.id,
                                              f'{item} в корзине: {int(cart[callback.message.chat.id][item] * 1000)}'
                                              f'{serving_option}')
-        print(cart)
 
 
 def remove_from_cart(callback, item, option, serving_option):
     try:
         rqst = cart[callback.message.chat.id].get(item)
         print(f'{item} for {callback.from_user.first_name}')
-        if rqst - option <= 0:
+        if rqst - option <= 0.5:
             del cart[callback.message.chat.id][item]
             pennij_bot.answer_callback_query(callback.id, f'{item} - удалено из корзины')
         else:
@@ -706,7 +737,6 @@ def remove_from_cart(callback, item, option, serving_option):
                                                  f'{item} остаток в корзине: '
                                                  f'{int(cart[callback.message.chat.id][item] * 1000)}'
                                                  f'{serving_option}')
-        print(cart)
     except TypeError:
         pennij_bot.answer_callback_query(callback.id,
                                          f'{item} - нет в корзине')
@@ -721,11 +751,11 @@ def cartChapter(message=None, callback=None):
     if message:
         stash, total_ammount = stashCheck(cart[message.chat.id])
         pennij_bot.send_message(message.chat.id, f'Твоя корзина, {message.from_user.first_name}:'
-                                                 f'\n{stash}', reply_markup=markup)
+                                                 f'\n{stash}', reply_markup=markup, parse_mode='html')
     elif callback:
         stash, total_ammount = stashCheck(cart[callback.message.chat.id])
         pennij_bot.send_message(callback.message.chat.id, f'Твоя корзина, {callback.from_user.first_name}:'
-                                                          f'\n{stash}', reply_markup=markup)
+                                                          f'\n{stash}', reply_markup=markup, parse_mode='html')
 
     return total_ammount
 
@@ -1014,50 +1044,51 @@ def chooseBeer(message):
 """Полезные функции"""
 
 
-def smartBottles(liters, price):
-    # Если литров не 0
-    if liters > 0:
-        liters_price = price * liters
-        print(f'{liters}л = {liters_price}р')
-        big_bottles = liters // 1.5
-        small_bottles = False
-        extrasmall_bottles = False
-        remainder = liters % 1.5
-        if remainder.is_integer():
-            small_bottles = remainder
-        else:
-            extrasmall_bottles = remainder
+def send_email(message, subject):
+    message = message.replace('<b>', '').replace('</b>', '')
+    clear_message = f"Subject: {subject}{message}".encode('UTF-8')
 
-        if (liters / 1.5).is_integer():
-            bottles_price = int(big_bottles) * 15
-            return f"1.5L x {int(big_bottles)} = {bottles_price}р" \
-                   f"\ntotal ammount: {bottles_price + liters_price}р"
-        elif small_bottles:
-            if big_bottles:
-                bottles_price = (int(big_bottles) + int(small_bottles)) * 15
-                return f"1.5L x {int(big_bottles)} \n1L x {int(small_bottles)} = {bottles_price}р" \
-                       f"\ntotal ammount: {bottles_price + liters_price}р"
-            else:
-                bottles_price = int(small_bottles) * 15
-                return f"1L x {int(small_bottles)} = {bottles_price}р" \
-                       f"\ntotal ammount: {bottles_price + liters_price}р"
-        elif extrasmall_bottles:
-            bottles_price = int(big_bottles) * 15 + 13
-            return f"1.5L x {int(big_bottles)} \n0.5L x 1 = {bottles_price}р" \
-                   f"\ntotal ammount: {bottles_price + liters_price}р"
-    # Если литров 0
+    sender = SENDER
+    password = PASS
+
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+
+    try:
+        server.login(sender, password)
+        server.sendmail(sender, 'kruzkapennogo@gmail.com', clear_message)
+
+        return "The message was sent successfully!"
+    except Exception as _ex:
+        return f"{_ex}\n Check your login or password please!"
+
+
+def smartBottles(liters):
+    is_good = liters / 1.5
+    if is_good.is_integer():
+        bottles_1_5 = is_good
+        return {'1.5': int(bottles_1_5)}
     else:
-        return 'Литров не может быть 0'
+        bottles_1 = 1
+        while True:
+            is_good = (liters - bottles_1) / 1.5
+            if is_good.is_integer():
+                bottles_1_5 = is_good
+                if int(bottles_1_5) > 0:
+                    return {'1.5': int(bottles_1_5), '1': int(bottles_1)}
+                else:
+                    return {'1': int(bottles_1)}
+            else:
+                bottles_1 += 1
 
 
 def announcment(message, say, percent=None):
     if percent:
         random_number = random.randint(0, 100)
         if random_number <= percent:
-            print(random_number, percent)
             tell = random.choice(say)
             pennij_bot.send_message(message.chat.id, f'{tell}', parse_mode='html')
-            print(f'Огласил "{tell}" для {message.from_user.first_name}')
+            print(f'Огласил "{tell}" для {message.from_user.first_name} с шансом {random_number}% из {percent}')
     else:
         tell = random.choice(say)
         pennij_bot.send_message(message.chat.id, f'{tell}', parse_mode='html')
@@ -1075,6 +1106,28 @@ def send_to_admin(message, in_app=False):
             pennij_bot.send_message(ADMIN_ID, f'Somebody come to find for some beer. His name/ID ='
                                               f' {message.from_user.first_name}{id}')
         print(f'Somebody wanna find some. His ID = {id}. Name {message.from_user.first_name}')
+
+
+def into_translit(text):
+    d = {
+        'а': 'a', 'к': 'k', 'х': 'h', 'б': 'b', 'л': 'l', 'ц': 'c', 'в': 'v', 'м': 'm', 'ч': 'ch',
+        'г': 'g', 'н': 'n', 'ш': 'sh', 'д': 'd', 'о': 'o', 'щ': 'shh', 'е': 'e', 'п': 'p', 'ъ': '*',
+        'ё': 'jo', 'р': 'r', 'ы': 'y', 'ж': 'zh', 'с': 's', 'ь': "'", 'з': 'z', 'т': 't', 'э': 'je',
+        'и': 'i', 'у': 'u', 'ю': 'ju', 'й': 'j', 'ф': 'f', 'я': 'ya'
+    }
+
+    main_fin = ''
+
+    for i in text:
+        if i.lower() in d:
+            if i.islower():
+                main_fin += d.get(i)
+            elif i.isupper():
+                main_fin += d.get(i.lower()).title()
+        else:
+            main_fin += i
+
+    return main_fin
 
 
 def go_infinity():
