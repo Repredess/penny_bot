@@ -6,7 +6,7 @@ import telebot
 import time
 import os
 import random
-from config import BOT_TOKEN, URL, ANSWERS, ADMIN_ID, ANNOUNCEMENT, SAY, DELIVERY, INTRODUCE, SENDER, PASS
+from config import BOT_TOKEN, URL, ANSWERS, ADMIN_ID, ANNOUNCEMENT, SAY, DELIVERY, INTRODUCE, SENDER, PASS, ADMINS
 from assortiment import beer, cidre, crackers, knuts, fish, cheese, lemonade, energize, sodie_pop, bottle_price
 from nick_names import NICK
 
@@ -38,14 +38,9 @@ site - Перейти на сайт
 
 Фотки и описание для всех айтемов
 
-Добавление заказа в базу данных user_id, name(first_name + nick + second_name), order, date, total
-
 Загрузить бота на сервер
 
 Работа бота в рабочее время (с 10 до 9)
-
-Сохранение телефона пользователя, его фамилии и ника в бд(таблица login_id)
-
 
 
 Приветствуем вас в онлайн баре — Svoi Delivery!
@@ -124,7 +119,7 @@ def welcome(message):
     pennij_bot.send_message(message.chat.id,
                             f"Привет, <b>{message.from_user.first_name}</b>! "
                             f"Здесь можно заказать <b>пиво и рыбку</b> через приложение или по телефону ;)"
-                            f"\nНомер телефона для связи находится в разделе: 📄 Контакты",
+                            f"\nНомер для связи находится в разделе: 📄 Контакты",
                             parse_mode='html', reply_markup=markup)
 
 
@@ -213,8 +208,10 @@ def handle_contact(message):
         phone = message.contact.phone_number
         write_order(message, phone=phone, order=order, total=money)
 
-        pennij_bot.send_message(ADMIN_ID, f"Заказ для {message.from_user.first_name} оформлен:\n{order}\n"
-                                          f"Номер для связи: {message.contact.phone_number}", parse_mode='html')
+        for id in ADMINS:
+            pennij_bot.send_message(id, f"Заказ для {message.from_user.first_name} оформлен:\n{order}\n"
+                                        f"Номер для связи: {message.contact.phone_number}", parse_mode='html')
+
         on_email = f"{order}\nНомер для связи: {message.contact.phone_number}\nID чата: {message.chat.id}"
         pennij_bot.send_message(message.chat.id, f'Спасибо за заказ, {message.from_user.first_name}.',
                                 parse_mode='html')
@@ -248,8 +245,9 @@ def beer_add(message):
         pennij_bot.send_photo(message.chat.id, pic, f'<i><b>{item}</b> | {beer[item]["Фильтрация"]}</i>'
                                                     f'\n{beer[item]["Описание"]}'
                                                     f'\n'
-                                                    f'\nЦена: {beer[item]["Цена"]}р/литр | '
-                                                    f'Алкоголь: {beer[item]["Алкоголь"]}',
+                                                    f'\nПлостность: {beer[item]["Плотность"]}'
+                                                    f'\nАлкоголь: {beer[item]["Алкоголь"]}'
+                                                    f'\nЦена: {beer[item]["Цена"]}р/литр',
                               reply_markup=markup_inline,
                               parse_mode='html')
     except FileNotFoundError:
@@ -257,8 +255,9 @@ def beer_add(message):
         pennij_bot.send_photo(message.chat.id, pic, f'<i><b>{item}</b> | {beer[item]["Фильтрация"]}</i>'
                                                     f'\n{beer[item]["Описание"]}'
                                                     f'\n'
-                                                    f'\nЦена: {beer[item]["Цена"]}р/литр | '
-                                                    f'Алкоголь: {beer[item]["Алкоголь"]}',
+                                                    f'\nПлостность: {beer[item]["Плотность"]}'
+                                                    f'\nАлкоголь: {beer[item]["Алкоголь"]}'
+                                                    f'\nЦена: {beer[item]["Цена"]}р/литр',
                               reply_markup=markup_inline,
                               parse_mode='html')
 
@@ -286,7 +285,7 @@ def cidre_add(message):
                               reply_markup=markup_inline,
                               parse_mode='html')
     except FileNotFoundError:
-        pic = open(f'goods/pivo/Пиво.jpg', 'rb')
+        pic = open(f'goods/ciders/Сидры.jpg', 'rb')
         pennij_bot.send_photo(message.chat.id, pic, f'<i><b>{item}</b></i>'
                                                     f'\n{cidre[item]["Описание"]}'
                                                     f'\n'
@@ -310,6 +309,7 @@ def knuts_add(message):
         pic = open(f"goods/knuts/{item}.jpg", 'rb')
         pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
                                                     f'\n{knuts[item]["Описание"]}'
+                                                    f'\n'
                                                     f'\nЦена: {knuts[item]["Цена"]}р/упаковка',
                               reply_markup=markup_inline,
                               parse_mode='html')
@@ -317,6 +317,7 @@ def knuts_add(message):
         pic = open(f'goods/knuts/Палочки.jpg', 'rb')
         pennij_bot.send_photo(message.chat.id, pic, f'<i><b>{item}</b></i>'
                                                     f'\n{knuts[item]["Описание"]}'
+                                                    f'\n'
                                                     f'\nЦена: {knuts[item]["Цена"]}р/упаковка',
                               reply_markup=markup_inline,
                               parse_mode='html')
@@ -337,6 +338,7 @@ def crackers_add(message):
         pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
                                                     f'\n{crackers[item]["Описание"]}'
                                                     f'\nОстрота: {crackers[item]["Острота"]}',
+                              f'\n'
                               f'\nЦена: {int(crackers[item]["Цена"] / 10)}р/100гр',
                               reply_markup=markup_inline,
                               parse_mode='html')
@@ -345,6 +347,7 @@ def crackers_add(message):
         pennij_bot.send_photo(message.chat.id, pic, f'<i><b>{item}</b></i>'
                                                     f'\n{crackers[item]["Описание"]}'
                                                     f'\nОстрота: {crackers[item]["Острота"]}'
+                                                    f'\n'
                                                     f'\nЦена: {int(crackers[item]["Цена"] / 10)}р/100гр',
                               reply_markup=markup_inline,
                               parse_mode='html')
@@ -366,7 +369,8 @@ def fish_add(message):
             pic = open(f"goods/riba/{item}.jpg", 'rb')
             pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
                                                         f'\n{fish[item]["Описание"]}'
-                                                        f'\nЦена: <i>{int(fish[item]["Цена"] / 10)}р</i>/'
+                                                        f'\n'
+                                                        f'\nЦена: {int(fish[item]["Цена"] / 10)}р/'
                                                         f'<b>{serving_option}</b>',
                                   reply_markup=markup_inline,
                                   parse_mode='html')
@@ -374,7 +378,8 @@ def fish_add(message):
             pic = open(f'goods/riba/рыба.jpg', 'rb')
             pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
                                                         f'\n{fish[item]["Описание"]}'
-                                                        f'\nЦена: <i>{int(fish[item]["Цена"] / 10)}р</i>/'
+                                                        f'\n'
+                                                        f'\nЦена: {int(fish[item]["Цена"] / 10)}р/'
                                                         f'<b>{serving_option}</b>',
                                   reply_markup=markup_inline,
                                   parse_mode='html')
@@ -392,14 +397,16 @@ def fish_add(message):
             pic = open(f"goods/riba/{item}.jpg", 'rb')
             pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
                                                         f'\n{fish[item]["Описание"]}'
-                                                        f'\nЦена: <i>{fish[item]["Цена"]}р</i>/<b>{serving_option}</b>',
+                                                        f'\n'
+                                                        f'\nЦена: {fish[item]["Цена"]}р/<b>{serving_option}</b>',
                                   reply_markup=markup_inline,
                                   parse_mode='html')
         except FileNotFoundError:
             pic = open(f'goods/riba/рыба.jpg', 'rb')
             pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
                                                         f'\n{fish[item]["Описание"]}'
-                                                        f'\nЦена: <i>{fish[item]["Цена"]}р</i>/<b>{serving_option}</b>',
+                                                        f'\n'
+                                                        f'\nЦена: {fish[item]["Цена"]}р/<b>{serving_option}</b>',
                                   reply_markup=markup_inline,
                                   parse_mode='html')
 
@@ -418,14 +425,16 @@ def cheese_add(message):
         pic = open(f"goods/cheese/{item}.jpg", 'rb')
         pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
                                                     f'\n{cheese[item]["Описание"]}'
-                                                    f'\nЦена: <i>{cheese[item]["Цена"]}р</i>/<b>1шт</b>',
+                                                    f'\n'
+                                                    f'\nЦена: {cheese[item]["Цена"]}р/<b>1шт</b>',
                               reply_markup=markup_inline,
                               parse_mode='html')
     except FileNotFoundError:
         pic = open(f'goods/cheese/Косичка.jpg', 'rb')
         pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
                                                     f'\n{cheese[item]["Описание"]}'
-                                                    f'\nЦена: <i>{cheese[item]["Цена"]}р</i>/<b>1шт</b>',
+                                                    f'\n'
+                                                    f'\nЦена: {cheese[item]["Цена"]}р/<b>1шт</b>',
                               reply_markup=markup_inline,
                               parse_mode='html')
 
@@ -448,14 +457,16 @@ def lemonade_add(message):
         pic = open(f"goods/lemonade/{item}.png", 'rb')
         pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
                                                     f'\n{lemonade[item]["Описание"]}'
-                                                    f'\nЦена: <i>{lemonade[item]["Цена"]}р</i>/<b>1шт</b>',
+                                                    f'\n'
+                                                    f'\nЦена: {lemonade[item]["Цена"]}р/<b>1шт</b>',
                               reply_markup=markup_inline,
                               parse_mode='html')
     except FileNotFoundError:
         pic = open(f'goods/lemonade/Лимонад.jpg', 'rb')
         pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
                                                     f'\n{lemonade[item]["Описание"]}'
-                                                    f'\nЦена: <i>{lemonade[item]["Цена"]}р</i>/<b>1шт</b>',
+                                                    f'\n'
+                                                    f'\nЦена: {lemonade[item]["Цена"]}р/<b>1шт</b>',
                               reply_markup=markup_inline,
                               parse_mode='html')
 
@@ -478,14 +489,16 @@ def energize_add(message):
         pic = open(f"goods/energize/{item}.png", 'rb')
         pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
                                                     f'\n{energize[item]["Описание"]}'
-                                                    f'\nЦена: <i>{energize[item]["Цена"]}р</i>/<b>1шт</b>',
+                                                    f'\n'
+                                                    f'\nЦена: {energize[item]["Цена"]}р/<b>1шт</b>',
                               reply_markup=markup_inline,
                               parse_mode='html')
     except FileNotFoundError:
         pic = open(f'goods/lemonade/Лимонад.jpg', 'rb')
         pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
                                                     f'\n{energize[item]["Описание"]}'
-                                                    f'\nЦена: <i>{energize[item]["Цена"]}р</i>/<b>1шт</b>',
+                                                    f'\n'
+                                                    f'\nЦена: {energize[item]["Цена"]}р/<b>1шт</b>',
                               reply_markup=markup_inline,
                               parse_mode='html')
 
@@ -508,14 +521,16 @@ def sodie_pop_add(message):
         pic = open(f"goods/sodie_pop/{item}.png", 'rb')
         pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
                                                     f'\n{sodie_pop[item]["Описание"]}'
-                                                    f'\nЦена: <i>{sodie_pop[item]["Цена"]}р</i>/<b>1шт</b>',
+                                                    f'\n'
+                                                    f'\nЦена: {sodie_pop[item]["Цена"]}р/<b>1.5л</b>',
                               reply_markup=markup_inline,
                               parse_mode='html')
     except FileNotFoundError:
         pic = open(f'goods/lemonade/Лимонад.jpg', 'rb')
         pennij_bot.send_photo(message.chat.id, pic, f'<b><i>{item}</i></b>'
                                                     f'\n{sodie_pop[item]["Описание"]}'
-                                                    f'\nЦена: <i>{sodie_pop[item]["Цена"]}р</i>/<b>1шт</b>',
+                                                    f'\n'
+                                                    f'\nЦена: {sodie_pop[item]["Цена"]}р/1.5л</b>',
                               reply_markup=markup_inline,
                               parse_mode='html')
 
@@ -805,7 +820,7 @@ def main_page(message, order=False):
         pennij_bot.send_message(message.chat.id,
                                 f"Уверен тебе здесь нравится, <b>{message.from_user.first_name}</b>! "
                                 f"\nТы можешь заказать <b>пиво и рыбку</b> через приложение или по телефону ;)"
-                                f"\nНомер телефона для связи находится в разделе: 📄 Контакты",
+                                f"\nНомер для связи находится в разделе: 📄 Контакты",
                                 parse_mode='html', reply_markup=markup)
         announcment(message=message, say=SAY)
     else:
@@ -830,7 +845,7 @@ def user_messages(message):
                                 'Заказать пиво по телефону:'
                                 '\n<i>+79155633989</i> - <b>Кирилл</b>'
                                 '\n'
-                                '\n<b>Разаработчик</b> - <u>@repredess</u>',
+                                '\n<b>Разработчик</b> - <u>@repredess</u>',
                                 parse_mode='html')
     elif message.text == '🛒 Корзина':
         show_cart_button(message)
@@ -1056,7 +1071,7 @@ def chooseSnacs(message):
 def chooseCheese(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton("Косичка")
-    btn2 = types.KeyboardButton("↩️ Назад к ассортименту")
+    btn2 = types.KeyboardButton("↩️ Назад к снекам")
     markup.row(btn1, btn2)
 
     pennij_bot.send_message(message.chat.id, 'Упругие и вкусные😋 \nВыбирай:', reply_markup=markup)
@@ -1065,7 +1080,7 @@ def chooseCheese(message):
 def chooseSidre(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton("Голубая лагуна")
-    btn2 = types.KeyboardButton("Глинтвейн")
+    btn2 = types.KeyboardButton("Ламбрусско")
     btn3 = types.KeyboardButton("Манго-маракуйя")
     btn4 = types.KeyboardButton("↩️ Назад к ассортименту")
     markup.row(btn1, btn2)
