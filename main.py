@@ -85,20 +85,33 @@ def welcome(message):
     cursor.execute("""CREATE TABLE IF NOT EXISTS login_id(
     chat_id INTEGER,
     user_name TEXT,
-    user_id INTEGER);
+    user_id INTEGER,
+    reg_date TEXT,
+    last_date TEXT);
     """)
 
     connect.commit()
 
     chat_id = message.chat.id
     user_name = message.from_user.first_name
+    reg_date = " ".join(str(datetime.datetime.now()).split('.')[0:-1])
+    if message.from_user.username:
+        user_name += f' "{message.from_user.username}"'
+    if message.from_user.last_name:
+        user_name += f' {message.from_user.last_name}'
     user_id = message.from_user.id
+    last_date = " ".join(str(datetime.datetime.now()).split('.')[0:-1])
     cursor.execute(f"SELECT chat_id FROM login_id WHERE chat_id = {chat_id}")
     data = cursor.fetchone()
     if data is None:
-        cursor.execute("INSERT INTO login_id VALUES(?,?,?);", (chat_id,
-                                                               user_name,
-                                                               user_id))
+        cursor.execute("INSERT INTO login_id VALUES(?,?,?,?,?);", (chat_id,
+                                                                   user_name,
+                                                                   user_id,
+                                                                   reg_date,
+                                                                   last_date))
+        connect.commit()
+    else:
+        cursor.execute("UPDATE login_id SET last_date = ? WHERE chat_id = ?", (reg_date, chat_id))
         connect.commit()
 
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -117,7 +130,8 @@ def welcome(message):
 
 @pennij_bot.message_handler(commands=["to_all"])
 def to_all(message):
-    pass
+    if message.chat.id == ADMIN_ID:
+        pass
 
 
 @pennij_bot.message_handler(commands=["zakaz"])
@@ -196,12 +210,15 @@ def cancel_order_handler(callback):
 def handle_contact(message):
     try:
         order, money = stashCheck(cart[message.chat.id])
+        phone = message.contact.phone_number
+        write_order(message, phone=phone, order=order, total=money)
+
         pennij_bot.send_message(ADMIN_ID, f"Заказ для {message.from_user.first_name} оформлен:\n{order}\n"
                                           f"Номер для связи: {message.contact.phone_number}", parse_mode='html')
         on_email = f"{order}\nНомер для связи: {message.contact.phone_number}\nID чата: {message.chat.id}"
-        print(send_email(on_email, subject=f"Заказ для {message.from_user.first_name} оформлен\n"))
         pennij_bot.send_message(message.chat.id, f'Спасибо за заказ, {message.from_user.first_name}.',
                                 parse_mode='html')
+        print(send_email(on_email, subject=f"Заказ для {message.from_user.first_name} оформлен\n"))
         del cart[message.chat.id]
         main_page(message, order=True)
     except KeyError:
@@ -888,6 +905,40 @@ def user_messages(message):
 
 
 def goodsChapter(message, talk=True):
+    connect = sqlite3.connect('shop.db')
+    cursor = connect.cursor()
+
+    cursor.execute("""CREATE TABLE IF NOT EXISTS login_id(
+    chat_id INTEGER,
+    user_name TEXT,
+    user_id INTEGER,
+    reg_date TEXT,
+    last_date TEXT);
+    """)
+
+    connect.commit()
+
+    chat_id = message.chat.id
+    user_name = message.from_user.first_name
+    reg_date = " ".join(str(datetime.datetime.now()).split('.')[0:-1])
+    if message.from_user.username:
+        user_name += f' "{message.from_user.username}"'
+    if message.from_user.last_name:
+        user_name += f' {message.from_user.last_name}'
+    user_id = message.from_user.id
+    cursor.execute(f"SELECT chat_id FROM login_id WHERE chat_id = {chat_id}")
+    data = cursor.fetchone()
+    if data is None:
+        cursor.execute("INSERT INTO login_id VALUES(?,?,?,?,?);", (chat_id,
+                                                                   user_name,
+                                                                   user_id,
+                                                                   reg_date,
+                                                                   last_date))
+        connect.commit()
+    else:
+        cursor.execute("UPDATE login_id SET last_date = ? WHERE chat_id = ?", (reg_date, chat_id))
+        connect.commit()
+
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton("Пиво")
     btn2 = types.KeyboardButton("Сидры")
@@ -1058,6 +1109,44 @@ def chooseBeer(message):
 
 
 """Полезные функции"""
+
+
+def write_order(message, phone, order, total):
+    connect = sqlite3.connect('shop.db')
+    cursor = connect.cursor()
+
+    cursor.execute("""CREATE TABLE IF NOT EXISTS orders(
+        chat_id INTEGER,
+        user_name TEXT,
+        user_id INTEGER,
+        user_phone INTEGER,
+        user_order TEXT,
+        order_date TEXT,
+        order_ammount INTEGER);
+        """)
+
+    connect.commit()
+
+    chat_id = message.chat.id
+    user_phone = phone
+    order_date = " ".join(str(datetime.datetime.now()).split('.')[0:-1])
+    user_id = message.from_user.id
+    user_order = order
+    order_ammount = total
+    user_name = message.from_user.first_name
+    if message.from_user.username:
+        user_name += f' "{message.from_user.username}"'
+    if message.from_user.last_name:
+        user_name += f' {message.from_user.last_name}'
+
+    cursor.execute("INSERT INTO orders VALUES(?,?,?,?,?,?,?);", (chat_id,
+                                                                 user_name,
+                                                                 user_id,
+                                                                 user_phone,
+                                                                 user_order,
+                                                                 order_date,
+                                                                 order_ammount))
+    connect.commit()
 
 
 def send_email(message, subject):
