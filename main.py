@@ -6,7 +6,8 @@ import telebot
 import time
 import os
 import random
-from config import BOT_TOKEN, URL, ANSWERS, ADMIN_ID, ANNOUNCEMENT, SAY, DELIVERY, INTRODUCE, SENDER, PASS, ADMINS
+from config import BOT_TOKEN, URL, ANSWERS, ADMIN_ID, ANNOUNCEMENT, SAY, DELIVERY, INTRODUCE, SENDER, PASS, ADMINS, \
+    BAN_LIST
 from assortiment import beer, cidre, crackers, knuts, fish, cheese, lemonade, energize, sodie_pop, bottle_price
 from nick_names import NICK
 
@@ -15,18 +16,19 @@ from nick_names import NICK
 содержащую токен Вашего бота. Так же можно создать переменную URL в которой указывается нужный Вам сайт.
 В переменной ANNOUNCEMENT можно включать и отключать извещения.
 
-Что бы добавить или изменить кнопку надо доавить ее в нужный раздел словаря в assortiment.py, а затем изменить функцию 
-chooseНУЖНЫЙ_ТОВАР так, что бы у кнопки было такое же название что и у в словаре. Так же рекомендуется загрузить фотку
-по разделу. Название фотки должно соответствовать названию кнопки
+Что бы добавить или изменить кнопку надо добавить товар связанный с ней в нужный раздел словаря в assortiment.py,
+а затем изменить функцию chooseНУЖНЫЙ_ТОВАР так, что бы у кнопки было такое же название что и у в словаре. 
+Так же рекомендуется загрузить фотографию по соответствующему разделу. Название фотографии должно соответствовать
+названию кнопки.
 
 Команды для бота:
 start - Вернуться к началу
 help - Увидеть все команды
 site - Перейти на сайт
-
-ИРЛ:
-Прописать сколько грамм рыбы пробивать через кассу что бы било чек
-
+generate -  Сгенерировать рофл
+write - Записать общую корзину в КЭШ (перед отключением или рестартом сервера)
+read - Записать КЭШ в корзину (после включения сервера)
+zakaz - Оформление заказа
 
 Нужно добавить:
 
@@ -36,26 +38,7 @@ site - Перейти на сайт
 Нужно будет отправить фотку для рассылки, сообщение для рассылки посмотреть как это будет выглядеть и разослать
 всем пользователям из таблицы login_id
 
-Фотки и описание для всех айтемов
-
 Загрузить бота на сервер
-
-Работа бота в рабочее время (с 10 до 9)
-
-
-Приветствуем вас в онлайн баре — Svoi Delivery!
-Заказы принимаем до 17:00 по будням!
-Заказы оформленные в выходные — обрабатываются в понедельник.
-Как получить заказ:
-— заказ должен быть кратным 12 или 20 банкам/бутылкам (в заказе могут быть по 1 шт любой позиции);
-— отправка по Москве — 450 руб.;
-— по Москве за МКАД — от 500 руб. (точная стоимость будет рассчитана после оформления заказа);
-— в регионы рассчитывается отдельно (точная стоимость будет рассчитана после оформления заказа).
-
-Сроки:
-— заказ сделан до 14:30 — в тот же день;
-— заказ оформлен после 14:30 — на следующий день;
-— отправка в регионы зависит от удаленности точки доставки и возможностей ТК.
 """
 
 pennij_bot = telebot.TeleBot(BOT_TOKEN)
@@ -65,15 +48,26 @@ pennij_bot = telebot.TeleBot(BOT_TOKEN)
 #                      'Пиво Моряк': 2.0, 'Сидр Голубая лагуна': 1.0, 'Сидр Манго-маракуйя': 3.0,
 #                      'Сухарики Тайский перец': 0.2, 'Сухарики Краб': 0.1, 'Закуска Палочки из тунца': 1,
 #                      'Закуска Мясные кнуты': 1, 'Лимонад Клубничный': 1, 'Лимонад Классический': 1,
-#                      'Энергетик TARGET ACTIVE': 1, 'Полторашка CitrusHit Bochkari': 1}}
+#                      'Энергетик TARGET ACTIVE': 1, 'Полторашка CitrusHit Bochkari': 1},
+#         1626668178: {'Пиво Вайсберг': 5.5, 'Полторашка CitrusHit Bochkari': 1}
+#         }
 
 cart = {}
 
 DIR = "memes"
 
+"""Раздел с командами"""
+
 
 @pennij_bot.message_handler(commands=["start"])
 def welcome(message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    btn1 = types.KeyboardButton('🍻 Ассортимент 🐟')
+    btn2 = types.KeyboardButton('🛟 Помощь')
+    btn3 = types.KeyboardButton('📄 Контакты')
+    markup.row(btn1)
+    markup.row(btn2, btn3)
+
     connect = sqlite3.connect('shop.db')
     cursor = connect.cursor()
 
@@ -105,28 +99,76 @@ def welcome(message):
                                                                    reg_date,
                                                                    last_date))
         connect.commit()
+
+        pennij_bot.send_message(message.chat.id,
+                                f"Приветствуем вас, {message.from_user.first_name} в онлайн магазине — Кружка Пенного!"
+                                f"\nЗаказы принимаем с 10:00 до 21:00 ежедневно!"
+                                f"\nЗаказы оформленные в после 21:00 — обрабатываются на следующий день."
+                                f"\nКак получить заказ:"
+                                f"\n— Заказ оформляется по телефону из раздела 'Контакты' в главном меню "
+                                f"или с помощью бота;"
+                                f"\n— Процесс заказа через бота: добавляем все нужные товары и оформляем заказ "
+                                f"в разделе 'Корзина';"
+                                "\n— Доставка по Керчи 200р.",
+                                parse_mode='html', reply_markup=markup)
     else:
         cursor.execute("UPDATE login_id SET last_date = ? WHERE chat_id = ?", (reg_date, chat_id))
         connect.commit()
 
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn1 = types.KeyboardButton('🍻 Ассортимент 🐟')
-    btn2 = types.KeyboardButton('🛟 Помощь')
-    btn3 = types.KeyboardButton('📄 Контакты')
-    markup.row(btn1)
-    markup.row(btn2, btn3)
-
-    pennij_bot.send_message(message.chat.id,
-                            f"Привет, <b>{message.from_user.first_name}</b>! "
-                            f"Здесь можно заказать <b>пиво и рыбку</b> через приложение или по телефону ;)"
-                            f"\nНомер для связи находится в разделе: 📄 Контакты",
-                            parse_mode='html', reply_markup=markup)
+        pennij_bot.send_message(message.chat.id,
+                                f"Привет, <b>{message.from_user.first_name}</b>! "
+                                f"Здесь можно заказать <b>пиво и рыбку</b> через приложение или по телефону ;)"
+                                f"\nНомер для связи находится в разделе: 📄 Контакты",
+                                parse_mode='html', reply_markup=markup)
 
 
 @pennij_bot.message_handler(commands=["to_all"])
 def to_all(message):
     if message.chat.id == ADMIN_ID:
         pass
+
+
+@pennij_bot.message_handler(commands=["write"])
+def write(message):
+    global cart
+    try:
+        if message.from_user.id == ADMIN_ID:
+            with open('cache.txt', 'w') as file:
+                for key, value in cart.items():
+                    file.write(f"{key}:{value}\n")
+            pennij_bot.send_message(message.chat.id, 'Кэш успешно создан!')
+        else:
+            raise ValueError
+    except ValueError:
+        user_name = "EMPTY_USERNAME"
+        if message.from_user.username:
+            user_name = message.from_user.username
+        pennij_bot.send_message(message.chat.id, f'{message.from_user.first_name}:{message.chat.id} пытался '
+                                                 f'использовать команду /write! @{user_name}')
+        pennij_bot.send_message(message.chat.id, 'У Вас нет доступа к этой команде!')
+
+
+@pennij_bot.message_handler(commands=["read"])
+def read(message):
+    global cart
+    if message.from_user.id == ADMIN_ID:
+        try:
+            with open('cache.txt', 'r') as file:
+                lines = file.readlines()
+                for line in lines:
+                    key, value = line.strip().split(':', maxsplit=1)
+                    if int(key) not in cart:
+                        cart[int(key)] = eval(value)
+            pennij_bot.send_message(message.chat.id, 'Корзина успешно обновлена из кэша!')
+        except FileNotFoundError:
+            pennij_bot.send_message(message.chat.id, 'Корзина НЕ обновлена из кэша!')
+    else:
+        user_name = "EMPTY_USERNAME"
+        if message.from_user.username:
+            user_name = message.from_user.username
+        pennij_bot.send_message(message.chat.id, f'{message.from_user.first_name}:{message.chat.id} пытался '
+                                                 f'использовать команду /read! @{user_name}')
+        pennij_bot.send_message(message.chat.id, 'У Вас нет доступа к этой команде!')
 
 
 @pennij_bot.message_handler(commands=["zakaz"])
@@ -167,6 +209,9 @@ def get_help(message):
                             parse_mode='html')
 
 
+"""Раздел с оформлением заказа"""
+
+
 def placing_an_order(message):
     markup = telebot.types.InlineKeyboardMarkup()
     markup.add(telebot.types.InlineKeyboardButton('Да', callback_data='confirm_order'),
@@ -203,25 +248,31 @@ def cancel_order_handler(callback):
 
 @pennij_bot.message_handler(content_types=['contact'])
 def handle_contact(message):
-    try:
-        order, money = stashCheck(cart[message.chat.id])
-        phone = message.contact.phone_number
-        write_order(message, phone=phone, order=order, total=money)
+    if message.chat.id not in BAN_LIST:
+        try:
+            order, money = stashCheck(cart[message.chat.id])
+            phone = message.contact.phone_number
+            write_order(message, phone=phone, order=order, total=money)
 
-        for id in ADMINS:
-            pennij_bot.send_message(id, f"Заказ для {message.from_user.first_name} оформлен:\n{order}\n"
-                                        f"Номер для связи: {message.contact.phone_number}", parse_mode='html')
+            for id in ADMINS:
+                pennij_bot.send_message(id, f"Заказ для {message.from_user.first_name} оформлен:\n{order}\n"
+                                            f"Номер для связи: {message.contact.phone_number}", parse_mode='html')
 
-        on_email = f"{order}\nНомер для связи: {message.contact.phone_number}\nID чата: {message.chat.id}"
-        pennij_bot.send_message(message.chat.id, f'Спасибо за заказ, {message.from_user.first_name}.',
-                                parse_mode='html')
-        print(send_email(on_email, subject=f"Заказ для {message.from_user.first_name} оформлен\n"))
-        del cart[message.chat.id]
-        main_page(message, order=True)
-    except KeyError:
-        pennij_bot.send_message(message.chat.id, f'Упс, кажется с нашим сервером что то случилось.\n'
-                                                 f'Попробуйте заполнить корзину еще раз.')
-        main_page(message)
+            on_email = f"{order}\nНомер для связи: {message.contact.phone_number}\nID чата: {message.chat.id}"
+            pennij_bot.send_message(message.chat.id, f'Спасибо за заказ, {message.from_user.first_name}.',
+                                    parse_mode='html')
+            print(send_email(on_email, subject=f"Заказ для {message.from_user.first_name} оформлен\n"))
+            del cart[message.chat.id]
+            main_page(message, order=True)
+        except KeyError:
+            pennij_bot.send_message(message.chat.id, f'Упс, кажется с нашим сервером что то случилось.\n'
+                                                     f'Попробуйте заполнить корзину еще раз.')
+            main_page(message)
+    else:
+        pennij_bot.send_message(message.chat.id, f'Вы находитесь в бане. Заказ невозможен', parse_mode='html')
+
+
+"""Раздел с добавлением товара"""
 
 
 @pennij_bot.message_handler(func=lambda message: message.text in beer)
@@ -535,6 +586,9 @@ def sodie_pop_add(message):
                               parse_mode='html')
 
 
+"""Работа с корзиной"""
+
+
 @pennij_bot.callback_query_handler(func=lambda callback: callback.data == "shoppingCart")
 def show_cart_callback(callback):
     if callback.message.chat.id in cart:
@@ -808,29 +862,7 @@ def cartChapter(message=None, callback=None):
     return total_ammount
 
 
-def main_page(message, order=False):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn1 = types.KeyboardButton('🍻 Ассортимент 🐟')
-    btn2 = types.KeyboardButton('🛟 Помощь')
-    btn3 = types.KeyboardButton('📄 Контакты')
-    markup.row(btn1)
-    markup.row(btn2, btn3)
-
-    if not order:
-        pennij_bot.send_message(message.chat.id,
-                                f"Уверен тебе здесь нравится, <b>{message.from_user.first_name}</b>! "
-                                f"\nТы можешь заказать <b>пиво и рыбку</b> через приложение или по телефону ;)"
-                                f"\nНомер для связи находится в разделе: 📄 Контакты",
-                                parse_mode='html', reply_markup=markup)
-        announcment(message=message, say=SAY)
-    else:
-        pennij_bot.send_message(message.chat.id,
-                                f"Скоро тебе презвонят что бы уточнить детали. Будь на связи😉",
-                                parse_mode='html', reply_markup=markup)
-        announcment(message=message, say=SAY)
-
-
-"""Пользовательские команды"""
+"""Пользовательские сообщения"""
 
 
 @pennij_bot.message_handler()
@@ -839,7 +871,10 @@ def user_messages(message):
     if message.text == '🍻 Ассортимент 🐟':
         goodsChapter(message)
     elif message.text == '🛟 Помощь':
-        pennij_bot.send_message(message.chat.id, 'Держись, брат!')
+        if message.chat.id != ADMIN_ID:
+            pennij_bot.send_message(message.chat.id, 'Держись, брат!')
+        else:
+            admins_menu(message)
     elif message.text == '📄 Контакты':
         pennij_bot.send_message(message.chat.id,
                                 'Заказать пиво по телефону:'
@@ -917,6 +952,39 @@ def user_messages(message):
 
 
 """Подраздел и раздел с выбором продукции"""
+
+
+def admins_menu(message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    btn1 = types.KeyboardButton("/write")
+    btn2 = types.KeyboardButton("/read")
+    btn3 = types.KeyboardButton("↩️ Назад в меню")
+    markup.row(btn1, btn2)
+    markup.row(btn3)
+
+    pennij_bot.send_message(message.chat.id, 'Админ-панель:', reply_markup=markup)
+
+
+def main_page(message, order=False):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    btn1 = types.KeyboardButton('🍻 Ассортимент 🐟')
+    btn2 = types.KeyboardButton('🛟 Помощь')
+    btn3 = types.KeyboardButton('📄 Контакты')
+    markup.row(btn1)
+    markup.row(btn2, btn3)
+
+    if not order:
+        pennij_bot.send_message(message.chat.id,
+                                f"Уверен тебе здесь нравится, <b>{message.from_user.first_name}</b>! "
+                                f"\nТы можешь заказать <b>пиво и рыбку</b> через приложение или по телефону ;)"
+                                f"\nНомер для связи находится в разделе: 📄 Контакты",
+                                parse_mode='html', reply_markup=markup)
+        announcment(message=message, say=SAY)
+    else:
+        pennij_bot.send_message(message.chat.id,
+                                f"Скоро тебе презвонят что бы уточнить детали. Будь на связи😉",
+                                parse_mode='html', reply_markup=markup)
+        announcment(message=message, say=SAY)
 
 
 def goodsChapter(message, talk=True):
@@ -1204,11 +1272,12 @@ def smartBottles(liters):
 
 def announcment(message, say, percent=None):
     if percent:
-        random_number = random.randint(0, 100)
+        random_number = random.randint(0, 101)
         if random_number <= percent:
             tell = random.choice(say)
             pennij_bot.send_message(message.chat.id, f'{tell}', parse_mode='html')
-            print(f'Огласил "{tell}" для {message.from_user.first_name} с шансом {random_number}% из {percent}')
+            print(f'Огласил "{tell}" для {message.from_user.first_name}'
+                  f'Выпало число {random_number} с шансом {percent}% из 100')
     else:
         tell = random.choice(say)
         pennij_bot.send_message(message.chat.id, f'{tell}', parse_mode='html')

@@ -1,23 +1,12 @@
-import xlsxwriter
+from PIL import Image, ImageDraw, ImageFont
 
+# Создаем новое изображение
+image = Image.new('RGB', (800, 600), color = (255, 255, 255))
 
-def export_check(text):
-    workbook = xlsxwriter.Workbook('res.xlsx')
-    worksheet = workbook.add_worksheet()
-    text = text.split('\n')
-    s = 0
-    for i in range(len(text)):
-        name = text[i].split('\t')[0]
-        price = text[i].split('\t')[1]
-        n = text[i].split('\t')[2]
-        worksheet.write(i, 0, name)
-        worksheet.write(i, 1, float(price))
-        worksheet.write(i, 2, int(n))
-        worksheet.write(i, 3, '=B' + str(i + 1) + '*C' + str(i + 1))
-        s += 1
-    worksheet.write(s, 0, 'Итого')
-    worksheet.write(s, 3, '=SUM(D1:D' + str(s) + ')')
-    workbook.close()
+# Добавляем текст на изображение
+draw = ImageDraw.Draw(image)
+font = ImageFont.truetype('arial.ttf', 36)
+draw.text((10, 10), "Ваш текст здесь", fill=(0, 0, 0), font=font)
 
-
-export_check(f"---text---text---text---text")
+# Сохраняем изображение
+image.save('чек.jpg')
