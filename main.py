@@ -26,17 +26,10 @@ start - Вернуться к началу
 help - Увидеть все команды
 site - Перейти на сайт
 generate -  Сгенерировать рофл
-write - Записать общую корзину в КЭШ (перед отключением или рестартом сервера)
-read - Записать КЭШ в корзину (после включения сервера)
+write - Админ команда записи общей корзины в КЭШ (перед отключением или рестартом сервера)
+read - Админ команда записи КЭШа в корзину (после включения сервера)
 zakaz - Оформление заказа
-
-Нужно добавить:
-
-Рассылка акций и новинок пользователям
-
-Рассылку новых предложений пользователям - через кнопку настройки которая будет отображаться только у админов. 
-Нужно будет отправить фотку для рассылки, сообщение для рассылки посмотреть как это будет выглядеть и разослать
-всем пользователям из таблицы login_id
+to_all - Админ команда отправки сообщений всем пользователям 
 
 Загрузить бота на сервер
 """
@@ -53,6 +46,8 @@ pennij_bot = telebot.TeleBot(BOT_TOKEN)
 #         }
 
 cart = {}
+
+text = ""
 
 DIR = "memes"
 
@@ -125,7 +120,92 @@ def welcome(message):
 @pennij_bot.message_handler(commands=["to_all"])
 def to_all(message):
     if message.chat.id == ADMIN_ID:
-        pass
+        pennij_bot.send_message(message.chat.id, "Введите текст для отправки всем пользователям:")
+        pennij_bot.register_next_step_handler(message, register_announcement)
+
+
+def register_announcement(message):
+    global text
+    markup = telebot.types.InlineKeyboardMarkup()
+    btn1 = telebot.types.InlineKeyboardButton('Разослать этот текст', callback_data='announce')
+    btn2 = telebot.types.InlineKeyboardButton('Вернуться в главное меню', callback_data='menu')
+    markup.add(btn1, btn2)
+    text = message.text
+    pennij_bot.send_message(message.chat.id, f'Оповещение:\n{text}', reply_markup=markup)
+
+
+@pennij_bot.callback_query_handler(func=lambda callback: callback.data == 'announce')
+def confirm_announce(callback):
+    connect = sqlite3.connect('shop.db')
+    cursor = connect.cursor()
+
+    cursor.execute("""SELECT chat_id FROM login_id;""")
+    data = cursor.fetchall()
+    IDs = [i[0] for i in data]
+    counter = 0
+    if text:
+        for id in IDs:
+            try:
+                pennij_bot.send_message(id, text)
+                print(f'Annonce sended to {id}')
+                counter += 1
+            except:
+                print(f'Something went wrong with {id}')
+        if counter:
+            pennij_bot.send_message(ADMIN_ID, f'Sended to {counter}/{len(IDs)}')
+            pennij_bot.answer_callback_query(ADMIN_ID, f'Sended to {counter}/{len(IDs)}', cache_time=1000)
+        else:
+            pennij_bot.answer_callback_query(ADMIN_ID, 'Something went wrong', cache_time=1000)
+            pennij_bot.send_message(ADMIN_ID, 'Something went wrong')
+    else:
+        pennij_bot.send_message(ADMIN_ID, 'Сообщение пустое')
+
+
+@pennij_bot.callback_query_handler(func=lambda callback: callback.data == 'menu')
+def cancel_announce(callback):
+    pennij_bot.send_message(ADMIN_ID, 'Оповещение отменено')
+    main_page(callback.message, order=False)
+
+
+@pennij_bot.message_handler(commands=["zakaz"])
+def commandOrder(message):
+    if message.chat.id in cart:
+        if cart[message.chat.id]:
+            placing_an_order(message)
+    else:
+        pennij_bot.send_message(message.chat.id, 'Корзина пуста')
+
+
+@pennij_bot.message_handler(commands=["generate"])
+def generateNickname(message):
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    btn1 = types.KeyboardButton('/generate')
+    btn2 = types.KeyboardButton('/start')
+    markup.row(btn1, btn2)
+    nm_p = os.path.join(DIR, random.choice(os.listdir(DIR)))
+    random.shuffle(NICK)
+    nick = random.choice(NICK)
+    pic = open(nm_p, 'rb')
+    print(message.from_user.first_name, nm_p, nick, datetime.datetime.now())
+    pennij_bot.send_photo(message.chat.id, pic, f'<b>{nick}</b>', parse_mode='html', reply_markup=markup)
+
+
+@pennij_bot.message_handler(commands=["site", "website"])
+def redirect_to_site(message):
+    markup = types.InlineKeyboardMarkup()
+    markup.add(types.InlineKeyboardButton("Перейти на сайт", url=URL))
+    pennij_bot.send_message(message.chat.id, "Ах да, вот ссылочка:", reply_markup=markup)
+
+
+@pennij_bot.message_handler(commands=["help"])
+def get_help(message):
+    pennij_bot.send_message(message.chat.id,
+                            "<b>Вернуться в начало</b>: <u>/start</u> "
+                            "\n<b>По вопросам неисправностей или сотрудничества:</b> <u>@repredess</u>",
+                            parse_mode='html')
+
+
+"""Запись и получение КЭШа"""
 
 
 @pennij_bot.message_handler(commands=["write"])
@@ -169,44 +249,6 @@ def read(message):
         pennij_bot.send_message(message.chat.id, f'{message.from_user.first_name}:{message.chat.id} пытался '
                                                  f'использовать команду /read! @{user_name}')
         pennij_bot.send_message(message.chat.id, 'У Вас нет доступа к этой команде!')
-
-
-@pennij_bot.message_handler(commands=["zakaz"])
-def commandOrder(message):
-    if message.chat.id in cart:
-        if cart[message.chat.id]:
-            placing_an_order(message)
-    else:
-        pennij_bot.send_message(message.chat.id, 'Корзина пуста')
-
-
-@pennij_bot.message_handler(commands=["generate"])
-def generateNickname(message):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn1 = types.KeyboardButton('/generate')
-    btn2 = types.KeyboardButton('/start')
-    markup.row(btn1, btn2)
-    nm_p = os.path.join(DIR, random.choice(os.listdir(DIR)))
-    random.shuffle(NICK)
-    nick = random.choice(NICK)
-    pic = open(nm_p, 'rb')
-    print(message.from_user.first_name, nm_p, nick, datetime.datetime.now())
-    pennij_bot.send_photo(message.chat.id, pic, f'<b>{nick}</b>', parse_mode='html', reply_markup=markup)
-
-
-@pennij_bot.message_handler(commands=["site", "website"])
-def redirect_to_site(message):
-    markup = types.InlineKeyboardMarkup()
-    markup.add(types.InlineKeyboardButton("Перейти на сайт", url=URL))
-    pennij_bot.send_message(message.chat.id, "Ах да, вот ссылочка:", reply_markup=markup)
-
-
-@pennij_bot.message_handler(commands=["help"])
-def get_help(message):
-    pennij_bot.send_message(message.chat.id,
-                            "<b>Вернуться в начало</b>: <u>/start</u> "
-                            "\n<b>По вопросам неисправностей или сотрудничества:</b> <u>@repredess</u>",
-                            parse_mode='html')
 
 
 """Раздел с оформлением заказа"""
@@ -958,9 +1000,10 @@ def admins_menu(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton("/write")
     btn2 = types.KeyboardButton("/read")
-    btn3 = types.KeyboardButton("↩️ Назад в меню")
+    btn3 = types.KeyboardButton("/to_all")
+    btn4 = types.KeyboardButton("↩️ Назад в меню")
     markup.row(btn1, btn2)
-    markup.row(btn3)
+    markup.row(btn3, btn4)
 
     pennij_bot.send_message(message.chat.id, 'Админ-панель:', reply_markup=markup)
 
@@ -1004,6 +1047,7 @@ def goodsChapter(message, talk=True):
     chat_id = message.chat.id
     user_name = message.from_user.first_name
     reg_date = " ".join(str(datetime.datetime.now()).split('.')[0:-1])
+    last_date = " ".join(str(datetime.datetime.now()).split('.')[0:-1])
     if message.from_user.username:
         user_name += f' "{message.from_user.username}"'
     if message.from_user.last_name:
